@@ -1,0 +1,5 @@
+streamlit
+ccxt
+pandas
+bokeh>=3.0.0
+backtesting
