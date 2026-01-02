@@ -7,7 +7,7 @@ class SmaCross(Strategy):
     雙均線交叉策略
     """
     n1 = 10 # 短均線 (可優化)
-    n2 = 20 # 長均線 (可優化)
+    n2 = 50 # 長均線 (可優化)
 
     def init(self):
         close = pd.Series(self.data.Close)
