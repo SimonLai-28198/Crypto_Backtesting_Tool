@@ -11,8 +11,16 @@ class SmaCross(Strategy):
 
     def init(self):
         close = pd.Series(self.data.Close)
-        self.sma1 = self.I(lambda x: x.rolling(self.n1).mean(), close)
-        self.sma2 = self.I(lambda x: x.rolling(self.n2).mean(), close)
+        
+        # 定義有名稱的函數，讓圖表顯示更清楚
+        def SMA_Short(series):
+            return series.rolling(self.n1).mean()
+        
+        def SMA_Long(series):
+            return series.rolling(self.n2).mean()
+        
+        self.sma1 = self.I(SMA_Short, close, name=f'SMA{self.n1}')
+        self.sma2 = self.I(SMA_Long, close, name=f'SMA{self.n2}')
 
     def next(self):
         # 黃金交叉
@@ -39,7 +47,7 @@ class RsiOscillator(Strategy):
             rs = gain / loss
             return 100 - (100 / (1 + rs))
         
-        self.rsi = self.I(RSI, pd.Series(self.data.Close), self.rsi_period)
+        self.rsi = self.I(RSI, pd.Series(self.data.Close), self.rsi_period, name='RSI')
 
     def next(self):
         # 超賣買入

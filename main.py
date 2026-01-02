@@ -46,7 +46,7 @@ def main():
 
     # 4. 資金與手續費
     st.sidebar.markdown("---")
-    cash = st.sidebar.number_input("初始資金 (USDT)", value=10000)
+    cash = st.sidebar.number_input("初始資金 (USDT)", value=100000, min_value=10000)
     commission = st.sidebar.number_input("手續費率 (0.001 = 0.1%)", value=0.001, step=0.0001, format="%.4f")
 
     # --- Main Area: 執行區 ---
@@ -77,7 +77,14 @@ def main():
         # D. 顯示詳細數據
         with st.expander("查看詳細交易數據"):
             st.dataframe(stats._strategy._params) # 顯示參數
-            st.write(stats)
+            # 轉換 stats 為字典，避免 Timedelta 序列化問題
+            stats_dict = {}
+            for key, value in stats.items():
+                if isinstance(value, pd.Timedelta):
+                    stats_dict[key] = str(value)
+                else:
+                    stats_dict[key] = value
+            st.json(stats_dict)
 
         # E. 繪製互動圖表
         st.markdown("### 🕯️ 互動式 K 線圖")
