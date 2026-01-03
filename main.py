@@ -76,7 +76,38 @@ def main():
 
         # D. 顯示詳細數據
         with st.expander("查看詳細交易數據"):
-            st.dataframe(stats._strategy._params) # 顯示參數
+            # 顯示策略參數
+            st.subheader("策略參數")
+            st.dataframe(stats._strategy._params)
+            
+            # 顯示交易明細
+            st.subheader("📋 交易明細列表")
+            if len(stats._trades) > 0:
+                trades_df = stats._trades
+                st.dataframe(
+                    trades_df,
+                    width='stretch',  # 使用新的 width 參數替代 use_container_width
+                    column_config={
+                        "EntryTime": st.column_config.DatetimeColumn("進場時間", format="YYYY-MM-DD HH:mm"),
+                        "ExitTime": st.column_config.DatetimeColumn("出場時間", format="YYYY-MM-DD HH:mm"),
+                        "ReturnPct": st.column_config.NumberColumn("報酬率 (%)", format="%.2f%%"),
+                        "PnL": st.column_config.NumberColumn("損益", format="$%.2f"),
+                    }
+                )
+                
+                # 提供交易明細 CSV 下載
+                trades_csv = trades_df.to_csv()
+                st.download_button(
+                    label="📥 下載交易明細 (CSV)",
+                    data=trades_csv,
+                    file_name=f"trades_{symbol.replace('/', '_')}_{timeframe}.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.warning("無交易記錄")
+            
+            # 顯示完整統計數據
+            st.subheader("完整統計數據")
             # 轉換 stats 為字典，避免 Timedelta 序列化問題
             stats_dict = {}
             for key, value in stats.items():
@@ -90,6 +121,33 @@ def main():
         st.markdown("### 🕯️ 互動式 K 線圖")
         with st.spinner('正在渲染圖表...'):
             render_plot(bt)
+
+        # 在 main.py 的回測後加入
+        st.markdown("### 📋 數據詳情")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.info(f"""
+            **K 線總數**: {len(df)} 根  
+            **第一根 K 棒時間**: {df.index[0]}  
+            **最後一根 K 棒時間**: {df.index[-1]}  
+            """)
+        
+        with col2:
+            st.info(f"""
+            **第一根 K 棒收盤價**: ${df['Close'].iloc[0]:.2f}  
+            **最後一根 K 棒收盤價**: ${df['Close'].iloc[-1]:.2f}  
+            **總交易次數**: {len(stats._trades)} 筆
+            """)
+        
+        # 提供 CSV 下載功能
+        csv = df.to_csv()
+        st.download_button(
+            label="📥 下載 K 線數據 (CSV)",
+            data=csv,
+            file_name=f"{symbol.replace('/', '_')}_{timeframe}_{start_date}.csv",
+            mime="text/csv",
+        )
 
 if __name__ == "__main__":
     main()
