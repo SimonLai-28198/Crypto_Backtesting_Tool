@@ -1,0 +1,225 @@
+%PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R /F3 4 0 R /F4 7 0 R /F5 15 0 R /F6 16 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name /F3 /Subtype /Type1 /Type /Font
+>>
+endobj
+5 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/examples/Quick%20Start%20User%20Guide.html)
+>> /Border [ 0 0 0 ] /Rect [ 320.5109 727.8009 405.0569 742.2009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+6 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/examples/Quick%20Start%20User%20Guide.html)
+>> /Border [ 0 0 0 ] /Rect [ 315.5069 702.4009 408.0359 716.8009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+7 0 obj
+<<
+/BaseFont /Courier /Encoding /WinAnsiEncoding /Name /F4 /Subtype /Type1 /Type /Font
+>>
+endobj
+8 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/lib.html)
+>> /Border [ 0 0 0 ] /Rect [ 194.7449 558.9009 262.2449 573.3009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+9 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/lib.html#backtesting.lib.SignalStrategy)
+>> /Border [ 0 0 0 ] /Rect [ 71.19291 493.7009 134.1929 508.1009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+10 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://www.google.com/search?q=vectorized+backtesting)
+>> /Border [ 0 0 0 ] /Rect [ 455.8529 493.7009 496.8659 508.1009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+11 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://www.google.com/search?q=vectorized+backtesting)
+>> /Border [ 0 0 0 ] /Rect [ 71.19291 479.3009 116.7149 493.7009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+12 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/lib.html#backtesting.lib.TrailingStrategy)
+>> /Border [ 0 0 0 ] /Rect [ 71.19291 462.9009 143.1929 477.3009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+13 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://en.wikipedia.org/wiki/Average_true_range)
+>> /Border [ 0 0 0 ] /Rect [ 471.2969 462.9009 521.8229 477.3009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+14 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://en.wikipedia.org/wiki/Average_true_range)
+>> /Border [ 0 0 0 ] /Rect [ 71.19291 448.5009 94.20591 462.9009 ] /Subtype /Link /Type /Annot
+>>
+endobj
+15 0 obj
+<<
+/BaseFont /Courier-Bold /Encoding /WinAnsiEncoding /Name /F5 /Subtype /Type1 /Type /Font
+>>
+endobj
+16 0 obj
+<<
+/BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding /Name /F6 /Subtype /Type1 /Type /Font
+>>
+endobj
+17 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/lib.html)
+>> /Border [ 0 0 0 ] /Rect [ 352.3349 72.40085 492.8789 86.80085 ] /Subtype /Link /Type /Annot
+>>
+endobj
+18 0 obj
+<<
+/Annots [ 5 0 R 6 0 R 8 0 R 9 0 R 10 0 R 11 0 R 12 0 R 13 0 R 14 0 R 17 0 R ] /Contents 27 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 26 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+19 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/index.html#tutorials)
+>> /Border [ 0 0 0 ] /Rect [ 185.7449 776.6099 224.2559 791.0099 ] /Subtype /Link /Type /Annot
+>>
+endobj
+20 0 obj
+<<
+/A <<
+/S /URI /Type /Action /URI (https://kernc.github.io/backtesting.py/doc/backtesting/index.html#header-submodules)
+>> /Border [ 0 0 0 ] /Rect [ 377.8139 776.6099 446.8439 791.0099 ] /Subtype /Link /Type /Annot
+>>
+endobj
+21 0 obj
+<<
+/Annots [ 19 0 R 20 0 R ] /Contents 28 0 R /MediaBox [ 0 0 595.2756 841.8898 ] /Parent 26 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 
+  /Trans <<
+
+>> /Type /Page
+>>
+endobj
+22 0 obj
+<<
+/Outlines 24 0 R /PageMode /UseNone /Pages 26 0 R /Type /Catalog
+>>
+endobj
+23 0 obj
+<<
+/Author () /CreationDate (D:20260108213130+08'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260108213130+08'00') /Producer (xhtml2pdf <https://github.com/xhtml2pdf/xhtml2pdf/>) 
+  /Subject () /Title (Strategies Library) /Trapped /False
+>>
+endobj
+24 0 obj
+<<
+/Count 1 /First 25 0 R /Last 25 0 R /Type /Outlines
+>>
+endobj
+25 0 obj
+<<
+/Dest [ 18 0 R /Fit ] /Parent 24 0 R /Title (Library of Composable Base Strategies\266)
+>>
+endobj
+26 0 obj
+<<
+/Count 2 /Kids [ 18 0 R 21 0 R ] /Type /Pages
+>>
+endobj
+27 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 2957
+>>
+stream
+Gb!#^D/\/g')nJ00gK]V)^MM`G;%;Fg>4^NU3CH5=nKUDdF&YEo--h6;2X]:of#7Oq^#7+"unGrD43g%kO!PL.L-@]EUu+m!PH.$(N2<Q)m8A>?09#sHhcdsa^6Efn<_b54eMOKHcdN$*G0Zl'P2VuF1C0$#igBt9jQDA=Fc=7&:V5R8\oRd(:_'`gg\"\j+J/-9pm(+h,"/S-`@Po<TH'-:0m;'oa:JY9jOOMMmkTm6`Zp+bcZHd"\ddR=YB7sA93!ZXk&mUZUDZGTd<qY\L?N*8c9X3rr\7(,^!Vo^)=RIUSE;o8,m\L!2N+%*&R^(>po.2q!FQE*IO?14G49JBR+7o`snEr]?S-_$#Gqg:1t&44,;TKh)kH*;J@Q%,0Q6B@&&kfoJ5/$r>$:3Z:#X"SP<^,'/W:^dKSjc2Gbqn!@!l7(3r2h1kp;GeuAA5bX?PW86ql*>Arg\CP=+.Z[&fAl,K0U=Q.tK<Yd/X)8%Ibl#TtL1m7G]0:(cDZn>E8L2BsT_d,]o9+c)N/ljH!,0,l]9A&hQC9Jg\0tJ)-$)PYVB$S1;CogG2cshB]:PZ+F!d(7H[Z06Mq9lU:j#ZQ53O>!!OB4ZiBBVn^XcR7UY*#Br9#<'i,HlqcRFC]$4Oa-N_bZ7:[qJf=l+Yt;Pq'Aa<$:)tY#4,_<:L"<SHHG32J2\gDK8`J:^*sN>1_WQLna:OkWGs_.7RUP4)-;*R,SLeBEB_h?R2T4Gb945$c_sP?rtRs0kPjA&1TiHcUWhSPrV<FZ:9c=(jB;`OU9mlMVD(l4I+pp;PV7-o'GEJroYr0os1Zj?>Sp&U$oebCVIU*-:p/W/.AF"fUR4("#)qYXGbs*i55C4ZQL=4%idtTmS^0&<b-c8K6u2-55H=UaW>V:%2T)S?gm0'[Xrs"U/t/njY4KRrq1$-EP0)"mSc.5I9'A$f@d92rd"a,N=I;]_0>Y<Fe@3p'/7V9W>o%n7hkX<KK\?;/8IDJ\uaSNbIl]Qj3-/s)I!OMXTgSSNtmHa%J$lt*s+^jo0giX3&K7q'07`Xn-lNi=^#4uCUb%gb"?MidGQ29R](fL&:pg_A0$]P4.0XFPtVPi<uDc^UOK*;P&uLcM![Lo#/:me;pD:2c:XA?:p,;@]Qfr&ql(e4ZYXZ;Ztj&^PBDZJ*G6gB3P,'s!P^S0NeC91-?@%do^8c,n!B4W*X"qo<:)b]K&P8ALbg5B.Y0WDY]P,Bgdo8LL<,!oF'PNP4?11dp(qZ#Tf6PKD''pVPo^0.mU4%>)2u;p#PO:5fdp.1KNL]7%CCse&.%gj!b8f2q?m+>VF4=F'>^3(>@\`K7KCHCU)ZXCGDd^La7aaK`uWkBlXf]P*s%c^<%="l@UP4V3S1jOGlHU=>[[SFb_=n[b[I!ZI&g%5?/K5ka(#T&a5bH@M7Mr@s,E(#JK;s,'Ij_eZE<ns2T.O(o,NZAXE,,uW[eW$Xb86dM>gC]?Bn*Ueqn44QbGouXXitJCJo28*pOj*B(G6`\!uP'2I\bZ5kh&An,tT*P?%*XJnU2mLo=6JYOMaX,N8S=%$BN`.3]m+4ie2L-Vr>",k(Tg6fbL_<t*W%q*X41s)ITq_iS/NLSg&:_7,mK*bGH!HCVXs>*)@t6WUEq)e/R9TG?0E_f:b%Y]I_CNbgRf@^JT)U,H,k3ek?A"0#tgII,uG[ahu)&Y_[,h,^8NQ$>[PHo:k7;SA)pWg7r0$`"bK,!\G/j"$]QQ?0uV<=DsZ17<>AVsl;rPAV^HnW<JgFJhY1c0&8r<((2%SPW]O7VntpD(>0,kgD<7a9f/>^09\;%O>8bXqD'#]pZDHVNdRF,Ju3ENG^]$X*7RWSb1H%4\f3=53A$,G$.d;&kO*em^V[WO<M2Ven`"SZ#8AEU.P*V`hF#sJN&BCo'#_12[6,'m2t&p4kZTqYZiDKiA7b2aqEj*W%s9jX:AI;=>T`-Ra5E9mYL+Apu?su>N]tFci.aZhTJs)7d"nVf^DGpc)#.k>I\+B`S\q+c,YC:d)C/[LU+uF&'g/3dj%^F=%SR4iA+HsMY\IgRt5*&f85<,1q9JjG[k3`B@,Nd_nASr%(.W\\eah#DU`(ZrJcVg\ARAa?!sE+.TNR-/^asl5Y\J_Q,LY'=%e+7a)DiLCYqhB92WY^2Q02]-k'amai];-;&<,,e(F'@na\!g'Z3?oZ1@8u9rZ\`(s]'Piqc`^W/6\*"Z2.m:-4VFFlm/ehBDR4S[Q4bq`:fF?a1'+<URh/KRpKHLKYI#qA+"NgM'c<IX-1j=IV/(^I4mO@Xi/N6]tIliq1kX^?uc[YD;dfpA1M-PTGSJ(cLI[pYRCTgE$pNp7/9QW#>G<O75;-_0cqe";l<ipBcO+ZRl-DjJ-U@rgaepS,tUKihgpdd+hXq^j!).XYYNnfV0^[:UsUojcF<b[46,-k2M2iMfA!VTW@K+>H$a*B"2&:6<UXU?*>[i,kp#c=QA*ODnT0XK2#<`=G)Spnn,X_m#Y<OTt=cYi[rtIe$XV,i`N(#h!1FtO)@'rMO#X%_j&+rKFZ4No0<Vq-bkKQF]n+.ru<PNVP:LuR[SR[.9pI&<@:,;dHBH:n(`3fbl5[$h]Hjalfg:@5B<9dd2mG[fWcMeN4F/6]bi)=pqSETLB"ujL\=;[s,R*L_hUmP'o5l7r*eEXmi*)bP2hQV+V.g,XYKVVJ:_pF@m[M2#lA2eA!K,_Y*5s-3Cej[_k6@JeVCI*Thsk-cZo_++40*^bLOYQ6sZ?ul!$9kYa9u<cdpm>L<n0(`jWPM[LLJ;pX"7"gEJ2rPnMWTPt8lG@Q7Hc[^fp0^d#2b8lP)\J1o.<"@@Z-X]/.,-AH8rIqFMmm\o^d+$`UVVd6pH\T8dPn^'MsIgJR_jDBXUAF=Se#]6.5@("%N24(Q?N!%C%&D7gS`?$Qj2h4cGM-oZBrJ*?a7+MldE]M/]-ETl9@?h@-)G^8:EE0rJ~>endstream
+endobj
+28 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 326
+>>
+stream
+Gar?,h+kjA%#+0I'^$*j0Ql*FaX'K.OESG_0/,jV$;F^09cJ"HgAN]^`USY1r9;jm4?XbWg]Ma92\-<4YViqd&pAkRRsequoQdX+MNe^-;(55);'sPZZl.K.X,nrl8n+"G81;o2H-AULCW`K(-6[F:%p"R`.Lq.JY=V`MS659QWmHK&nu4+ljl6Q"9VGnndJ'l%)&=C#O1<!E`6DbAn"R_S&)=U3]@_c?l?-?[\;3f1:E99B")^3lII!2/iu\V67,<Oj*Nb>Xml"JL6J&E0/hGBQ,igtj?FMM(T:Z[#m@ju0GL!(jA?UaR:WMc3);-[ta(R(~>endstream
+endobj
+xref
+0 29
+0000000000 65535 f 
+0000000061 00000 n 
+0000000144 00000 n 
+0000000251 00000 n 
+0000000363 00000 n 
+0000000478 00000 n 
+0000000715 00000 n 
+0000000952 00000 n 
+0000001057 00000 n 
+0000001272 00000 n 
+0000001518 00000 n 
+0000001725 00000 n 
+0000001932 00000 n 
+0000002181 00000 n 
+0000002382 00000 n 
+0000002583 00000 n 
+0000002694 00000 n 
+0000002814 00000 n 
+0000003030 00000 n 
+0000003314 00000 n 
+0000003542 00000 n 
+0000003778 00000 n 
+0000004010 00000 n 
+0000004097 00000 n 
+0000004368 00000 n 
+0000004442 00000 n 
+0000004552 00000 n 
+0000004620 00000 n 
+0000007669 00000 n 
+trailer
+<<
+/ID 
+[<aeca0ba92137b9eeee95a2e9244fc9ed><aeca0ba92137b9eeee95a2e9244fc9ed>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 23 0 R
+/Root 22 0 R
+/Size 29
+>>
+startxref
+8086
+%%EOF

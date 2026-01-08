@@ -4,7 +4,7 @@ from backtesting import Backtest
 
 # 引入我們自定義的模組
 from data_loader import fetch_binance_data
-from strategies import SmaCross, RsiOscillator
+from strategies import SmaCross, RsiOscillator, SmaCrossATR
 from utils import render_plot
 
 # 頁面設定
@@ -12,6 +12,10 @@ st.set_page_config(layout="wide", page_title="Crypto Backtester Pro")
 
 def main():
     st.title("🚀 Python 加密貨幣量化回測系統")
+    
+    # 初始化 session_state 來保存回測結果
+    if 'backtest_results' not in st.session_state:
+        st.session_state.backtest_results = None
 
     # --- Sidebar: 設定區 ---
     st.sidebar.header("⚙️ 參數設定")
@@ -26,7 +30,8 @@ def main():
     st.sidebar.subheader("2. 策略選擇")
     strategy_map = {
         "SMA Cross (趨勢)": SmaCross,
-        "RSI Mean Reversion (震盪)": RsiOscillator
+        "RSI Mean Reversion (震盪)": RsiOscillator,
+        "SMA Cross + ATR 停損 (進階)": SmaCrossATR
     }
     selected_strategy_name = st.sidebar.radio("選擇策略", list(strategy_map.keys()))
     strategy_class = strategy_map[selected_strategy_name]
@@ -43,6 +48,14 @@ def main():
         params['rsi_period'] = st.sidebar.slider("RSI 週期", 5, 30, 14)
         params['upper_bound'] = st.sidebar.slider("超買界線", 50, 95, 70)
         params['lower_bound'] = st.sidebar.slider("超賣界線", 5, 50, 30)
+    elif selected_strategy_name == "SMA Cross + ATR 停損 (進階)":
+        st.sidebar.markdown("**均線參數**")
+        params['n1'] = st.sidebar.slider("短均線 (n1)", 5, 50, 10)
+        params['n2'] = st.sidebar.slider("長均線 (n2)", 20, 200, 50)
+        st.sidebar.markdown("**ATR 停損參數**")
+        params['atr_period'] = st.sidebar.slider("ATR 週期", 5, 30, 14)
+        params['sl_multiplier'] = st.sidebar.slider("停損倍數 (ATR ×)", 0.5, 5.0, 2.0, step=0.5)
+        params['tp_multiplier'] = st.sidebar.slider("停利倍數 (ATR ×)", 0.5, 10.0, 3.0, step=0.5)
 
     # 4. 資金與手續費
     st.sidebar.markdown("---")
@@ -58,14 +71,34 @@ def main():
 
         if df.empty:
             st.error("❌ 無法獲取數據，請檢查日期或網絡連接。")
-            return
-
+            st.session_state.backtest_results = None
+        else:
+            # B. 執行回測
+            # finalize_trades=True: 回測結束時自動平倉所有未平倉交易，將其計入統計
+            bt = Backtest(df, strategy_class, cash=cash, commission=commission, finalize_trades=True)
+            stats = bt.run(**params)
+            
+            # 保存回測結果到 session_state
+            st.session_state.backtest_results = {
+                'df': df,
+                'bt': bt,
+                'stats': stats,
+                'symbol': symbol,
+                'timeframe': timeframe,
+                'start_date': start_date
+            }
+    
+    # --- 顯示回測結果 (從 session_state 讀取) ---
+    if st.session_state.backtest_results is not None:
+        results = st.session_state.backtest_results
+        df = results['df']
+        bt = results['bt']
+        stats = results['stats']
+        symbol_saved = results['symbol']
+        timeframe_saved = results['timeframe']
+        start_date_saved = results['start_date']
+        
         st.success(f"✅ 成功獲取 {len(df)} 根 K 線")
-
-        # B. 執行回測
-        # finalize_trades=True: 回測結束時自動平倉所有未平倉交易，將其計入統計
-        bt = Backtest(df, strategy_class, cash=cash, commission=commission, finalize_trades=True)
-        stats = bt.run(**params)
 
         # C. 顯示指標 (Metrics)
         st.markdown("### 📊 回測績效")
@@ -101,8 +134,9 @@ def main():
                 st.download_button(
                     label="📥 下載交易明細 (CSV)",
                     data=trades_csv,
-                    file_name=f"trades_{symbol.replace('/', '_')}_{timeframe}.csv",
+                    file_name=f"trades_{symbol_saved.replace('/', '_')}_{timeframe_saved}.csv",
                     mime="text/csv",
+                    key="download_trades"
                 )
             else:
                 st.warning("無交易記錄")
@@ -146,8 +180,9 @@ def main():
         st.download_button(
             label="📥 下載 K 線數據 (CSV)",
             data=csv,
-            file_name=f"{symbol.replace('/', '_')}_{timeframe}_{start_date}.csv",
+            file_name=f"{symbol_saved.replace('/', '_')}_{timeframe_saved}_{start_date_saved}.csv",
             mime="text/csv",
+            key="download_kline"
         )
 
 if __name__ == "__main__":

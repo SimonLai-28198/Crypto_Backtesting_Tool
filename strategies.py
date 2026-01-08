@@ -198,3 +198,126 @@ class RsiOscillator(Strategy):
         # 理由：市場過度樂觀，價格可能被高估，預期回落
         elif self.rsi > self.upper_bound:
             self.position.close()  # 平倉所有持倉
+
+
+class SmaCrossATR(Strategy):
+    """
+    ═══════════════════════════════════════════════════════════════
+    策略名稱：ATR 動態停損雙均線策略 (SMA Cross with ATR Stop Loss)
+    ═══════════════════════════════════════════════════════════════
+    
+    【策略原理】
+    在傳統雙均線交叉策略的基礎上，加入 ATR (Average True Range) 
+    動態停損機制，讓停損點能根據市場波動度自動調整：
+    - 波動大時，停損距離較遠，避免被正常波動掃出場
+    - 波動小時，停損距離較近，更好地保護利潤
+    
+    【ATR 指標介紹】
+    ATR (Average True Range) 平均真實波動幅度：
+    - 衡量市場波動程度的指標
+    - True Range = max(High-Low, |High-前Close|, |Low-前Close|)
+    - ATR = True Range 的 N 日平均值
+    
+    【買入訊號】
+    - 條件：短期均線向上穿越長期均線（黃金交叉）
+    - 動作：買入並設定 ATR 動態停損/停利
+    - 停損 = 進場價 - ATR × 停損倍數
+    - 停利 = 進場價 + ATR × 停利倍數
+    
+    【賣出訊號】
+    - 條件 1：觸及停損價格（自動執行）
+    - 條件 2：觸及停利價格（自動執行）
+    - 條件 3：死亡交叉（手動平倉）
+    
+    【優點】
+    ✓ 停損距離會根據市場波動自動調整
+    ✓ 在高波動市場不容易被假突破掃出
+    ✓ 在低波動市場能更好保護利潤
+    ✓ 風險報酬比可預先設定
+    
+    【缺點】
+    ✗ ATR 參數需要根據不同市場調整
+    ✗ 極端行情下可能無法完全保護
+    ═══════════════════════════════════════════════════════════════
+    """
+    # 均線參數
+    n1 = 10           # 短期均線週期 (可優化參數)
+    n2 = 50           # 長期均線週期 (可優化參數)
+    
+    # ATR 停損參數
+    atr_period = 14   # ATR 計算週期 (可優化參數)
+    sl_multiplier = 2.0   # 停損 ATR 倍數 (可優化參數)
+    tp_multiplier = 3.0   # 停利 ATR 倍數 (可優化參數)
+
+    def init(self):
+        """
+        初始化函數：計算技術指標
+        只在回測開始時執行一次
+        """
+        close = pd.Series(self.data.Close)
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        
+        # 計算短期均線
+        def SMA_Short(series):
+            return series.rolling(self.n1).mean()
+        
+        # 計算長期均線
+        def SMA_Long(series):
+            return series.rolling(self.n2).mean()
+        
+        # 計算 ATR (Average True Range)
+        def ATR(high, low, close, period):
+            """
+            計算平均真實波動幅度 (Average True Range)
+            
+            True Range (TR) 定義為以下三者的最大值：
+            1. 當日最高價 - 當日最低價
+            2. |當日最高價 - 前一日收盤價|
+            3. |當日最低價 - 前一日收盤價|
+            
+            ATR = TR 的 N 日簡單移動平均
+            """
+            # 計算三個可能的 True Range 值
+            tr1 = high - low  # 當日振幅
+            tr2 = abs(high - close.shift(1))  # 高點與前收的距離
+            tr3 = abs(low - close.shift(1))   # 低點與前收的距離
+            
+            # True Range = 三者的最大值
+            tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+            
+            # ATR = TR 的移動平均
+            return tr.rolling(period).mean()
+        
+        # 註冊指標
+        self.sma1 = self.I(SMA_Short, close, name=f'SMA{self.n1}')
+        self.sma2 = self.I(SMA_Long, close, name=f'SMA{self.n2}')
+        self.atr = self.I(ATR, high, low, close, self.atr_period, name='ATR')
+
+    def next(self):
+        """
+        交易邏輯函數：每根 K 棒都會執行一次
+        根據均線交叉進場，使用 ATR 設定動態停損停利
+        """
+        # ★ 黃金交叉檢測 ★
+        if crossover(self.sma1, self.sma2):
+            # 計算進場價格（使用當前收盤價作為預估）
+            entry_price = self.data.Close[-1]
+            current_atr = self.atr[-1]
+            
+            # 計算動態停損價格
+            # 停損 = 進場價 - ATR × 停損倍數
+            stop_loss = entry_price - current_atr * self.sl_multiplier
+            
+            # 計算動態停利價格
+            # 停利 = 進場價 + ATR × 停利倍數
+            take_profit = entry_price + current_atr * self.tp_multiplier
+            
+            # 執行買入，同時設定停損和停利
+            self.buy(sl=stop_loss, tp=take_profit)
+        
+        # ★ 死亡交叉檢測 ★
+        # 如果尚未觸發停損/停利，手動平倉
+        elif crossover(self.sma2, self.sma1):
+            if self.position:
+                self.position.close()
