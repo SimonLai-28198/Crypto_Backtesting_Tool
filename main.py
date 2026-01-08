@@ -63,7 +63,8 @@ def main():
         st.success(f"✅ 成功獲取 {len(df)} 根 K 線")
 
         # B. 執行回測
-        bt = Backtest(df, strategy_class, cash=cash, commission=commission)
+        # finalize_trades=True: 回測結束時自動平倉所有未平倉交易，將其計入統計
+        bt = Backtest(df, strategy_class, cash=cash, commission=commission, finalize_trades=True)
         stats = bt.run(**params)
 
         # C. 顯示指標 (Metrics)
