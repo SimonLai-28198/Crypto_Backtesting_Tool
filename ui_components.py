@@ -4,14 +4,18 @@ UI Components Module
 """
 import streamlit as st
 import pandas as pd
-from strategies import SmaCross, RsiOscillator, SmaCrossATR
+from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze
 
 
 # 策略映射表
 STRATEGY_MAP = {
     "SMA Cross (趨勢)": SmaCross,
     "RSI Mean Reversion (震盪)": RsiOscillator,
-    "SMA Cross + ATR 停損 (進階)": SmaCrossATR
+    "SMA Cross + ATR 停損 (進階)": SmaCrossATR,
+    "LuciTech EMA (單向)": LuciTechEMA,
+    "LuciTech EMA (雙向)": LuciTechEMAShort,
+    "EMA + 帶通濾波器 (組合)": EMABandpassCombo,
+    "RSI T3 + 擠壓動量 (進階)": RSIAdaptiveT3Squeeze
 }
 
 
@@ -75,6 +79,39 @@ def render_single_params(strategy_name: str) -> dict:
         params['atr_period'] = st.sidebar.slider("ATR 週期", 5, 30, 14)
         params['sl_multiplier'] = st.sidebar.slider("停損倍數 (ATR ×)", 0.5, 5.0, 2.0, step=0.5)
         params['tp_multiplier'] = st.sidebar.slider("停利倍數 (ATR ×)", 0.5, 10.0, 3.0, step=0.5)
+    
+    elif strategy_name == "LuciTech EMA (單向)" or strategy_name == "LuciTech EMA (雙向)":
+        st.sidebar.markdown("**EMA 參數**")
+        params['ema_period'] = st.sidebar.slider("EMA 週期", 5, 50, 15)
+        st.sidebar.markdown("**停損設定**")
+        params['atr_period'] = st.sidebar.slider("ATR 週期", 5, 30, 14)
+        params['atr_multiplier'] = st.sidebar.slider("ATR 停損倍數", 0.5, 5.0, 1.5, step=0.5)
+        st.sidebar.markdown("**風險報酬**")
+        params['risk_reward'] = st.sidebar.slider("風險報酬比", 1.0, 5.0, 2.0, step=0.5)
+    
+    elif strategy_name == "EMA + 帶通濾波器 (組合)":
+        st.sidebar.markdown("**EMA 參數**")
+        params['ema_fast_len'] = st.sidebar.slider("快速 EMA 週期", 1, 10, 2)
+        params['ema_slow_len'] = st.sidebar.slider("慢速 EMA 週期", 10, 50, 20)
+        st.sidebar.markdown("**帶通濾波器參數**")
+        params['bpf_len'] = st.sidebar.slider("BPF 週期", 5, 50, 20)
+        params['bpf_delta'] = st.sidebar.slider("BPF Delta", 0.1, 1.0, 0.5, step=0.1)
+        params['bpf_sell_zone'] = st.sidebar.slider("BPF 賣出區", 0.0, 20.0, 5.0, step=0.5)
+        params['bpf_buy_zone'] = st.sidebar.slider("BPF 買入區", -20.0, 0.0, -5.0, step=0.5)
+        st.sidebar.markdown("**其他設定**")
+        params['reverse'] = st.sidebar.checkbox("反向訊號", value=False)
+    
+    elif strategy_name == "RSI T3 + 擠壓動量 (進階)":
+        st.sidebar.markdown("**T3 參數**")
+        params['rsi_len'] = st.sidebar.slider("RSI 週期", 5, 30, 14)
+        params['t3_min_len'] = st.sidebar.slider("T3 最小週期", 2, 20, 5)
+        params['t3_max_len'] = st.sidebar.slider("T3 最大週期", 20, 100, 50)
+        params['t3_volume_factor'] = st.sidebar.slider("T3 體積因子", 0.1, 1.5, 0.7, step=0.1)
+        st.sidebar.markdown("**Squeeze 參數**")
+        params['bb_length'] = st.sidebar.slider("布林帶週期", 10, 50, 27)
+        params['bb_mult'] = st.sidebar.slider("布林帶倍數", 1.0, 3.0, 2.0, step=0.5)
+        params['kc_length'] = st.sidebar.slider("Keltner 週期", 10, 50, 20)
+        params['kc_mult'] = st.sidebar.slider("Keltner 倍數", 1.0, 3.0, 1.5, step=0.5)
     
     return params
 
@@ -142,6 +179,86 @@ def render_optimize_params(strategy_name: str):
         optimize_params['n1'] = range(n1_min, n1_max + 1, n1_step)
         optimize_params['n2'] = range(n2_min, n2_max + 1, n2_step)
         optimize_params['sl_multiplier'] = [x / 10 for x in range(int(sl_min * 10), int(sl_max * 10) + 1, int(sl_step * 10))]
+    
+    elif strategy_name == "LuciTech EMA (風險管理)":
+        st.sidebar.markdown("**EMA 週期**")
+        ema_min = st.sidebar.number_input("EMA 最小值", 5, 50, 10, key="ema_min")
+        ema_max = st.sidebar.number_input("EMA 最大值", 5, 50, 25, key="ema_max")
+        ema_step = st.sidebar.number_input("EMA 步進值", 1, 10, 5, key="ema_step")
+        
+        st.sidebar.markdown("**ATR 停損倍數**")
+        atr_m_min = st.sidebar.number_input("ATR倍數最小值", 0.5, 5.0, 1.0, step=0.5, key="atr_m_min")
+        atr_m_max = st.sidebar.number_input("ATR倍數最大值", 0.5, 5.0, 2.5, step=0.5, key="atr_m_max")
+        atr_m_step = st.sidebar.number_input("ATR倍數步進值", 0.5, 2.0, 0.5, step=0.5, key="atr_m_step")
+        
+        st.sidebar.markdown("**風險報酬比**")
+        rr_min = st.sidebar.number_input("RR 最小值", 1.0, 5.0, 1.5, step=0.5, key="rr_min")
+        rr_max = st.sidebar.number_input("RR 最大值", 1.0, 5.0, 3.0, step=0.5, key="rr_max")
+        rr_step = st.sidebar.number_input("RR 步進值", 0.5, 2.0, 0.5, step=0.5, key="rr_step")
+        
+        optimize_params['ema_period'] = range(ema_min, ema_max + 1, ema_step)
+        optimize_params['atr_multiplier'] = [x / 10 for x in range(int(atr_m_min * 10), int(atr_m_max * 10) + 1, int(atr_m_step * 10))]
+        optimize_params['risk_reward'] = [x / 10 for x in range(int(rr_min * 10), int(rr_max * 10) + 1, int(rr_step * 10))]
+    
+    elif strategy_name == "LuciTech EMA (雙向)":
+        st.sidebar.markdown("**EMA 週期**")
+        ema_min = st.sidebar.number_input("EMA 最小值", 5, 50, 10, key="ema_min")
+        ema_max = st.sidebar.number_input("EMA 最大值", 5, 50, 25, key="ema_max")
+        ema_step = st.sidebar.number_input("EMA 步進值", 1, 10, 5, key="ema_step")
+        
+        st.sidebar.markdown("**ATR 停損倍數**")
+        atr_m_min = st.sidebar.number_input("ATR倍數最小值", 0.5, 5.0, 1.0, step=0.5, key="atr_m_min")
+        atr_m_max = st.sidebar.number_input("ATR倍數最大值", 0.5, 5.0, 2.5, step=0.5, key="atr_m_max")
+        atr_m_step = st.sidebar.number_input("ATR倍數步進值", 0.5, 2.0, 0.5, step=0.5, key="atr_m_step")
+        
+        st.sidebar.markdown("**風險報酬比**")
+        rr_min = st.sidebar.number_input("RR 最小值", 1.0, 5.0, 1.5, step=0.5, key="rr_min")
+        rr_max = st.sidebar.number_input("RR 最大值", 1.0, 5.0, 3.0, step=0.5, key="rr_max")
+        rr_step = st.sidebar.number_input("RR 步進值", 0.5, 2.0, 0.5, step=0.5, key="rr_step")
+        
+        optimize_params['ema_period'] = range(ema_min, ema_max + 1, ema_step)
+        optimize_params['atr_multiplier'] = [x / 10 for x in range(int(atr_m_min * 10), int(atr_m_max * 10) + 1, int(atr_m_step * 10))]
+        optimize_params['risk_reward'] = [x / 10 for x in range(int(rr_min * 10), int(rr_max * 10) + 1, int(rr_step * 10))]
+    
+    elif strategy_name == "EMA + 帶通濾波器 (組合)":
+        st.sidebar.markdown("**快速 EMA 週期**")
+        ema_fast_min = st.sidebar.number_input("快速EMA 最小值", 1, 10, 1, key="ema_fast_min")
+        ema_fast_max = st.sidebar.number_input("快速EMA 最大值", 1, 10, 5, key="ema_fast_max")
+        ema_fast_step = st.sidebar.number_input("快速EMA 步進值", 1, 5, 1, key="ema_fast_step")
+        
+        st.sidebar.markdown("**慢速 EMA 週期**")
+        ema_slow_min = st.sidebar.number_input("慢速EMA 最小值", 10, 50, 15, key="ema_slow_min")
+        ema_slow_max = st.sidebar.number_input("慢速EMA 最大值", 10, 50, 30, key="ema_slow_max")
+        ema_slow_step = st.sidebar.number_input("慢速EMA 步進值", 1, 10, 5, key="ema_slow_step")
+        
+        st.sidebar.markdown("**帶通濾波器週期**")
+        bpf_len_min = st.sidebar.number_input("BPF 週期最小值", 5, 50, 15, key="bpf_len_min")
+        bpf_len_max = st.sidebar.number_input("BPF 週期最大值", 5, 50, 30, key="bpf_len_max")
+        bpf_len_step = st.sidebar.number_input("BPF 週期步進值", 1, 10, 5, key="bpf_len_step")
+        
+        optimize_params['ema_fast_len'] = range(ema_fast_min, ema_fast_max + 1, ema_fast_step)
+        optimize_params['ema_slow_len'] = range(ema_slow_min, ema_slow_max + 1, ema_slow_step)
+        optimize_params['bpf_len'] = range(bpf_len_min, bpf_len_max + 1, bpf_len_step)
+    
+    elif strategy_name == "RSI T3 + 擠壓動量 (進階)":
+        st.sidebar.markdown("**RSI 週期**")
+        rsi_min = st.sidebar.number_input("RSI 最小值", 5, 30, 10, key="rsi_min")
+        rsi_max = st.sidebar.number_input("RSI 最大值", 5, 30, 21, key="rsi_max")
+        rsi_step = st.sidebar.number_input("RSI 步進值", 1, 10, 7, key="rsi_step")
+        
+        st.sidebar.markdown("**布林帶週期**")
+        bb_min = st.sidebar.number_input("BB 週期最小值", 10, 50, 20, key="bb_min")
+        bb_max = st.sidebar.number_input("BB 週期最大值", 10, 50, 35, key="bb_max")
+        bb_step = st.sidebar.number_input("BB 週期步進值", 1, 10, 5, key="bb_step")
+        
+        st.sidebar.markdown("**Keltner 週期**")
+        kc_min = st.sidebar.number_input("KC 週期最小值", 10, 50, 15, key="kc_min")
+        kc_max = st.sidebar.number_input("KC 週期最大值", 10, 50, 30, key="kc_max")
+        kc_step = st.sidebar.number_input("KC 週期步進值", 1, 10, 5, key="kc_step")
+        
+        optimize_params['rsi_len'] = range(rsi_min, rsi_max + 1, rsi_step)
+        optimize_params['bb_length'] = range(bb_min, bb_max + 1, bb_step)
+        optimize_params['kc_length'] = range(kc_min, kc_max + 1, kc_step)
     
     # 計算總組合數
     total_combinations = 1
