@@ -1362,3 +1362,135 @@ class EhlersCombo(Strategy):
             if self.position.is_long:
                 self.position.close()
             self.sell()
+
+
+class CatchingTheBottom(Strategy):
+    """
+    ═══════════════════════════════════════════════════════════════
+    策略名稱：抄底策略 (Catching the Bottom)
+    ═══════════════════════════════════════════════════════════════
+    
+    【策略來源】
+    根據 TradingView 上 Coinrule 分享的 Pine Script v5 策略轉換
+    專門設計用於在熊市中捕捉反彈機會
+    
+    【策略原理】
+    這是一個逆勢策略，在下跌趨勢中尋找超賣反彈機會：
+    - 利用 RSI 捕捉超賣和動能急跌
+    - 利用 SMA 交叉確認下跌趨勢
+    - 在趨勢轉強時獲利了結
+    
+    【買入訊號】必須同時滿足：
+    - RSI < 40（超賣區）
+    - RSI 較前一根 K 棒下跌超過 3 點（動能急跌）
+    - SMA50 向下穿越 SMA100（死亡交叉，確認空頭趨勢）
+    
+    【賣出訊號】必須同時滿足：
+    - RSI > 65（反彈到高位）
+    - SMA9 向上穿越 SMA50（短期黃金交叉）
+    
+    【優點】
+    ✓ 專門為熊市設計，逆勢抄底
+    ✓ RSI 動能急跌過濾假訊號
+    ✓ 多重條件減少誤判
+    
+    【缺點】
+    ✗ 在牛市表現可能不佳
+    ✗ 逆勢操作風險較高
+    ✗ 需要精準把握反彈時機
+    ═══════════════════════════════════════════════════════════════
+    """
+    # RSI 參數
+    rsi_length = 14           # RSI 計算週期 (可優化參數)
+    rsi_oversold = 40         # RSI 超賣閾值 (可優化參數)
+    rsi_overbought = 65       # RSI 超買閾值 (可優化參數)
+    rsi_decrease = 3          # RSI 下跌幅度閾值 (可優化參數)
+    
+    # SMA 參數
+    sma_fast = 50             # 快速 SMA 週期 (可優化參數)
+    sma_slow = 100            # 慢速 SMA 週期 (可優化參數)
+    sma_exit_fast = 9         # 出場快速 SMA 週期 (可優化參數)
+    sma_exit_slow = 50        # 出場慢速 SMA 週期 (可優化參數)
+
+    def init(self):
+        """
+        初始化函數：計算 RSI 和 SMA 技術指標
+        只在回測開始時執行一次
+        """
+        close = pd.Series(self.data.Close)
+        
+        # ====== 計算 RSI ======
+        def calc_rsi(series, period):
+            """計算相對強弱指標 (RSI)"""
+            delta = series.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(period).mean()
+            rs = gain / loss
+            return 100 - (100 / (1 + rs))
+        
+        # ====== 計算 SMA ======
+        def calc_sma(series, period):
+            """計算簡單移動平均線 (SMA)"""
+            return series.rolling(period).mean()
+        
+        # 註冊指標
+        self.rsi = self.I(calc_rsi, close, self.rsi_length, name='RSI')
+        self.sma_fast_line = self.I(calc_sma, close, self.sma_fast, name=f'SMA{self.sma_fast}')
+        self.sma_slow_line = self.I(calc_sma, close, self.sma_slow, name=f'SMA{self.sma_slow}')
+        self.sma_exit_fast_line = self.I(calc_sma, close, self.sma_exit_fast, name=f'SMA{self.sma_exit_fast}')
+        self.sma_exit_slow_line = self.I(calc_sma, close, self.sma_exit_slow, name=f'SMA{self.sma_exit_slow}')
+
+    def next(self):
+        """
+        交易邏輯函數：每根 K 棒都會執行一次
+        根據 RSI 和 SMA 交叉決定進出場
+        """
+        # 確保有足夠的歷史數據
+        if len(self.rsi) < 2:
+            return
+        
+        current_rsi = self.rsi[-1]
+        prev_rsi = self.rsi[-2]
+        
+        current_sma_fast = self.sma_fast_line[-1]
+        prev_sma_fast = self.sma_fast_line[-2] if len(self.sma_fast_line) > 1 else current_sma_fast
+        current_sma_slow = self.sma_slow_line[-1]
+        prev_sma_slow = self.sma_slow_line[-2] if len(self.sma_slow_line) > 1 else current_sma_slow
+        
+        current_sma_exit_fast = self.sma_exit_fast_line[-1]
+        prev_sma_exit_fast = self.sma_exit_fast_line[-2] if len(self.sma_exit_fast_line) > 1 else current_sma_exit_fast
+        current_sma_exit_slow = self.sma_exit_slow_line[-1]
+        prev_sma_exit_slow = self.sma_exit_slow_line[-2] if len(self.sma_exit_slow_line) > 1 else current_sma_exit_slow
+        
+        # ====== 買入條件 ======
+        # 條件 1: RSI < 超賣閾值 (預設 40)
+        buy_condition1 = current_rsi < self.rsi_oversold
+        
+        # 條件 2: RSI 較前一根 K 棒下跌超過指定幅度 (預設 3)
+        buy_condition2 = current_rsi < (prev_rsi - self.rsi_decrease)
+        
+        # 條件 3: SMA 快線向下穿越慢線 (死亡交叉)
+        # crossunder: 當前快線 < 慢線 且 前一根快線 >= 慢線
+        buy_condition3 = (current_sma_fast < current_sma_slow) and (prev_sma_fast >= prev_sma_slow)
+        
+        enter_long = buy_condition1 and buy_condition2 and buy_condition3
+        
+        # ====== 賣出條件 ======
+        # 條件 1: RSI > 超買閾值 (預設 65)
+        sell_condition1 = current_rsi > self.rsi_overbought
+        
+        # 條件 2: SMA9 向上穿越 SMA50 (黃金交叉)
+        # crossover: 當前快線 > 慢線 且 前一根快線 <= 慢線
+        sell_condition2 = (current_sma_exit_fast > current_sma_exit_slow) and (prev_sma_exit_fast <= prev_sma_exit_slow)
+        
+        exit_long = sell_condition1 and sell_condition2
+        
+        # ====== 交易執行 ======
+        # 只做多，不做空（這是一個抄底策略）
+        if not self.position:
+            if enter_long:
+                self.buy()
+        else:
+            if exit_long:
+                self.position.close()
+

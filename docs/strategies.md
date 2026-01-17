@@ -13,6 +13,7 @@
 5. [LuciTech EMA Short (雙向交易)](#5-lucitech-ema-short-雙向交易)
 6. [FreedX Grid Backtest (網格交易回測)](#6-freedx-grid-backtest-網格交易回測)
 7. [Ehlers Combo (綜合策略)](#7-ehlers-combo-綜合策略)
+8. [Catching the Bottom (抄底策略)](#8-catching-the-bottom-抄底策略)
 
 ---
 
@@ -421,4 +422,59 @@ ATR = True Range 的 N 日平均值
 
 - 趨勢明顯的市場
 - 需要高勝率的交易系統
-- 逯廣波動原理的量化交易
+- 遏廣波動原理的量化交易
+
+---
+
+## 8. Catching the Bottom (抄底策略)
+
+### 策略來源
+
+根據 TradingView 上 Coinrule 分享的 Pine Script v5 策略轉換。
+專門設計用於在熊市中捕捉反彈機會。
+
+### 策略原理
+
+這是一個**逆勢策略**，在下跌趨勢中尋找超賣反彈機會：
+- 利用 RSI 捕捉超賣和動能急跌
+- 利用 SMA 交叉確認下跌趨勢
+- 在趨勢轉強時獲利了結
+
+### 交易訊號
+
+| 訊號 | 條件 | 動作 |
+|------|------|------|
+| 買入 | RSI < 40 + RSI 下跌 > 3 + SMA50 死亡交叉 SMA100 | 做多 |
+| 賣出 | RSI > 65 + SMA9 黃金交叉 SMA50 | 平倉 |
+
+### 參數說明
+
+| 參數 | 說明 | 預設值 | 建議範圍 |
+|------|------|--------|----------|
+| `rsi_length` | RSI 計算週期 | 14 | 7-21 |
+| `rsi_oversold` | RSI 超賣閾值 | 40 | 30-45 |
+| `rsi_overbought` | RSI 超買閾值 | 65 | 60-75 |
+| `rsi_decrease` | RSI 下跌幅度閾值 | 3 | 2-5 |
+| `sma_fast` | 快速 SMA 週期 | 50 | 30-70 |
+| `sma_slow` | 慢速 SMA 週期 | 100 | 80-150 |
+| `sma_exit_fast` | 出場快速 SMA | 9 | 5-15 |
+| `sma_exit_slow` | 出場慢速 SMA | 50 | 30-70 |
+
+### 優點
+
+- ✅ 專為熊市設計，逆勢抄底
+- ✅ RSI 動能急跌過濾假訊號
+- ✅ 多重條件減少誤判
+- ✅ 適合短線快進快出
+
+### 缺點
+
+- ❌ 在牛市表現可能不佳
+- ❌ 逆勢操作風險較高
+- ❌ 需要精準把握反彈時機
+
+### 適用場景
+
+- **熊市或下跌趨勢**中的反彈交易
+- 短線操作 (5m, 15m, 30m, 45m)
+- 推薦幣種：ETH, BNB, MATIC, XRP, SOL, AVAX

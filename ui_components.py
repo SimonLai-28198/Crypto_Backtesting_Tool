@@ -4,7 +4,7 @@ UI Components Module
 """
 import streamlit as st
 import pandas as pd
-from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze, EhlersCombo
+from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze, EhlersCombo, CatchingTheBottom
 
 
 # 策略映射表
@@ -16,7 +16,8 @@ STRATEGY_MAP = {
     "LuciTech EMA (雙向)": LuciTechEMAShort,
     "EMA + 帶通濾波器 (組合)": EMABandpassCombo,
     "RSI T3 + 擠壓動量 (進階)": RSIAdaptiveT3Squeeze,
-    "Ehlers 綜合策略 (進階)": EhlersCombo
+    "Ehlers 綜合策略 (進階)": EhlersCombo,
+    "抄底策略 Catching Bottom (逆勢)": CatchingTheBottom
 }
 
 
@@ -122,6 +123,19 @@ def render_single_params(strategy_name: str) -> dict:
         params['snr_threshold'] = st.sidebar.slider("SNR 閾值", 0.0, 1.0, 0.1, step=0.05)
         st.sidebar.markdown("**出場設定**")
         params['exit_length'] = st.sidebar.slider("出場回看週期", 1, 50, 10)
+    
+    elif strategy_name == "抄底策略 Catching Bottom (逆勢)":
+        st.sidebar.markdown("**RSI 參數**")
+        params['rsi_length'] = st.sidebar.slider("RSI 週期", 5, 30, 14)
+        params['rsi_oversold'] = st.sidebar.slider("RSI 超賣閾值", 20, 50, 40)
+        params['rsi_overbought'] = st.sidebar.slider("RSI 超買閾值", 50, 80, 65)
+        params['rsi_decrease'] = st.sidebar.slider("RSI 下跌幅度", 1, 10, 3)
+        st.sidebar.markdown("**SMA 參數**")
+        params['sma_fast'] = st.sidebar.slider("快速 SMA", 20, 80, 50)
+        params['sma_slow'] = st.sidebar.slider("慢速 SMA", 50, 200, 100)
+        st.sidebar.markdown("**出場 SMA**")
+        params['sma_exit_fast'] = st.sidebar.slider("出場快速 SMA", 5, 20, 9)
+        params['sma_exit_slow'] = st.sidebar.slider("出場慢速 SMA", 30, 80, 50)
     
     return params
 
@@ -289,6 +303,38 @@ def render_optimize_params(strategy_name: str):
         optimize_params['length'] = range(length_min, length_max + 1, length_step)
         optimize_params['snr_threshold'] = [x / 100 for x in range(int(snr_min * 100), int(snr_max * 100) + 1, int(snr_step * 100))]
         optimize_params['exit_length'] = range(exit_min, exit_max + 1, exit_step)
+    
+    elif strategy_name == "抄底策略 Catching Bottom (逆勢)":
+        st.sidebar.markdown("**RSI 週期**")
+        rsi_len_min = st.sidebar.number_input("RSI 週期最小值", 5, 30, 10, key="rsi_len_min")
+        rsi_len_max = st.sidebar.number_input("RSI 週期最大值", 5, 30, 21, key="rsi_len_max")
+        rsi_len_step = st.sidebar.number_input("RSI 週期步進值", 1, 10, 7, key="rsi_len_step")
+        
+        st.sidebar.markdown("**RSI 超賣閾值**")
+        rsi_os_min = st.sidebar.number_input("超賣閾值最小值", 20, 50, 30, key="rsi_os_min")
+        rsi_os_max = st.sidebar.number_input("超賣閾值最大值", 20, 50, 45, key="rsi_os_max")
+        rsi_os_step = st.sidebar.number_input("超賣閾值步進值", 1, 10, 5, key="rsi_os_step")
+        
+        st.sidebar.markdown("**RSI 超買閾值**")
+        rsi_ob_min = st.sidebar.number_input("超買閾值最小值", 55, 80, 60, key="rsi_ob_min")
+        rsi_ob_max = st.sidebar.number_input("超買閾值最大值", 55, 80, 75, key="rsi_ob_max")
+        rsi_ob_step = st.sidebar.number_input("超買閾值步進值", 1, 10, 5, key="rsi_ob_step")
+        
+        st.sidebar.markdown("**RSI 下跌幅度**")
+        rsi_dec_min = st.sidebar.number_input("下跌幅度最小值", 1, 10, 2, key="rsi_dec_min")
+        rsi_dec_max = st.sidebar.number_input("下跌幅度最大值", 1, 10, 5, key="rsi_dec_max")
+        rsi_dec_step = st.sidebar.number_input("下跌幅度步進值", 1, 5, 1, key="rsi_dec_step")
+        
+        st.sidebar.markdown("**SMA 進場參數**")
+        sma_fast_min = st.sidebar.number_input("快速 SMA 最小值", 30, 80, 40, key="sma_fast_min")
+        sma_fast_max = st.sidebar.number_input("快速 SMA 最大值", 30, 80, 60, key="sma_fast_max")
+        sma_fast_step = st.sidebar.number_input("快速 SMA 步進值", 5, 20, 10, key="sma_fast_step")
+        
+        optimize_params['rsi_length'] = range(rsi_len_min, rsi_len_max + 1, rsi_len_step)
+        optimize_params['rsi_oversold'] = range(rsi_os_min, rsi_os_max + 1, rsi_os_step)
+        optimize_params['rsi_overbought'] = range(rsi_ob_min, rsi_ob_max + 1, rsi_ob_step)
+        optimize_params['rsi_decrease'] = range(rsi_dec_min, rsi_dec_max + 1, rsi_dec_step)
+        optimize_params['sma_fast'] = range(sma_fast_min, sma_fast_max + 1, sma_fast_step)
     
     # 計算總組合數
     total_combinations = 1
