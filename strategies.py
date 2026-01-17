@@ -970,3 +970,395 @@ class RSIAdaptiveT3Squeeze(Strategy):
                 self.position.close()
             if not self.position.is_short:
                 self.sell()
+
+
+class EhlersCombo(Strategy):
+    """
+    ═══════════════════════════════════════════════════════════════
+    策略名稱：Ehlers 綜合策略 (Ehlers Combo Strategy)
+    ═══════════════════════════════════════════════════════════════
+    
+    【策略來源】
+    根據 TradingView 上 simwai 分享的 Pine Script v5 策略轉換
+    原策略結合了 John Ehlers 的多個經典指標
+    
+    【策略原理】
+    結合 5 個 Ehlers 指標形成高精度的交易系統：
+    1. Signal to Noise Ratio (SNR)：信噪比，過濾雜訊
+    2. Elegant Oscillator：優雅震盪指標，捕捉動能
+    3. Decycler：解循環濾波器，過濾高頻雜訊
+    4. Instantaneous Trendline：瞬時趨勢線，判斷趨勢方向
+    5. Spearman Rank：斯皮爾曼等級相關，衡量趨勢強度
+    
+    【買入訊號】必須同時滿足：
+    - Elegant Oscillator 向上穿越 0
+    - Decycler 訊號向上穿越 0
+    - 價格向上穿越 Decycler
+    - 價格高於上升中的瞬時趨勢線
+    - Spearman Rank 為正值
+    - SNR 高於閾值
+    
+    【賣空訊號】必須同時滿足：
+    - Elegant Oscillator 向下穿越 0
+    - Decycler 訊號向下穿越 0
+    - 價格向下跌破 Decycler
+    - 價格低於下降中的瞬時趨勢線
+    - Spearman Rank 為負值
+    - SNR 高於閾值
+    
+    【出場】
+    - 多單：價格跌破瞬時趨勢線
+    - 空單：價格突破瞬時趨勢線
+    
+    【優點】
+    ✓ 五重過濾，訊號品質高
+    ✓ SNR 有效過濾盤整雜訊
+    ✓ 結合趨勢、動能、統計相關性
+    
+    【缺點】
+    ✗ 交易次數可能較少
+    ✗ 計算複雜，需要較多歷史數據
+    ✗ 參數較多，需要根據市場調整
+    ═══════════════════════════════════════════════════════════════
+    """
+    # 基本參數
+    length = 20           # 主要週期 (可優化參數)
+    rms_length = 50       # RMS 計算週期 (可優化參數)
+    snr_threshold = 0.1   # SNR 閾值 (可優化參數)
+    exit_length = 10      # 出場訊號回看週期 (可優化參數)
+
+    def init(self):
+        """
+        初始化函數：計算所有 Ehlers 技術指標
+        只在回測開始時執行一次
+        """
+        import numpy as np
+        
+        close = pd.Series(self.data.Close)
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        src = close
+        n = len(src)
+        
+        # ====== 1. Ehlers Signal to Noise Ratio (SNR) ======
+        def calc_snr(src, high, low):
+            """
+            計算 Ehlers 信噪比
+            用於過濾雜訊，只在信號清晰時交易
+            """
+            n = len(src)
+            
+            # 初始化陣列
+            Range = np.zeros(n)
+            Smooth = np.zeros(n)
+            Detrender = np.zeros(n)
+            I1 = np.zeros(n)
+            Q1 = np.zeros(n)
+            jI = np.zeros(n)
+            jQ = np.zeros(n)
+            I2 = np.zeros(n)
+            Q2 = np.zeros(n)
+            Re = np.zeros(n)
+            Im = np.zeros(n)
+            Period = np.zeros(n)
+            SNR = np.zeros(n)
+            
+            price = src.values
+            h = high.values
+            l = low.values
+            
+            for i in range(6, n):
+                # 計算噪音（平均真實波幅）
+                Range[i] = 0.1 * (h[i] - l[i]) + 0.9 * Range[i-1]
+                
+                # Hilbert Transform
+                Smooth[i] = (4*price[i] + 3*price[i-1] + 2*price[i-2] + price[i-3]) / 10
+                Detrender[i] = (0.0962*Smooth[i] + 0.5769*Smooth[i-2] - 0.5769*Smooth[i-4] - 0.0962*Smooth[i-6]) * (0.075*Period[i-1] + 0.54)
+                
+                # 計算 InPhase 和 Quadrature 分量
+                Q1[i] = (0.0962*Detrender[i] + 0.5769*Detrender[i-2] - 0.5769*Detrender[i-4] - 0.0962*Detrender[i-6]) * (0.075*Period[i-1] + 0.54)
+                I1[i] = Detrender[i-3]
+                
+                # 相位推進 90 度
+                jI[i] = (0.0962*I1[i] + 0.5769*I1[i-2] - 0.5769*I1[i-4] - 0.0962*I1[i-6]) * (0.075*Period[i-1] + 0.54)
+                jQ[i] = (0.0962*Q1[i] + 0.5769*Q1[i-2] - 0.5769*Q1[i-4] - 0.0962*Q1[i-6]) * (0.075*Period[i-1] + 0.54)
+                
+                # 相量加法
+                I2[i] = I1[i] - jQ[i]
+                Q2[i] = Q1[i] + jI[i]
+                
+                # 平滑 I 和 Q 分量
+                I2[i] = 0.2*I2[i] + 0.8*I2[i-1]
+                Q2[i] = 0.2*Q2[i] + 0.8*Q2[i-1]
+                
+                # Homodyne Discriminator
+                Re[i] = I2[i]*I2[i-1] + Q2[i]*Q2[i-1]
+                Im[i] = I2[i]*Q2[i-1] - Q2[i]*I2[i-1]
+                Re[i] = 0.2*Re[i] + 0.8*Re[i-1]
+                Im[i] = 0.2*Im[i] + 0.8*Im[i-1]
+                
+                # 計算週期
+                if Im[i] != 0 and Re[i] != 0:
+                    Period[i] = 2*np.pi / np.arctan(Im[i]/Re[i])
+                else:
+                    Period[i] = Period[i-1]
+                
+                # 限制週期變化
+                if Period[i] > 1.5*Period[i-1]:
+                    Period[i] = 1.5*Period[i-1]
+                if Period[i] < 0.67*Period[i-1]:
+                    Period[i] = 0.67*Period[i-1]
+                Period[i] = max(6, min(100, Period[i]))
+                Period[i] = 0.2*Period[i] + 0.8*Period[i-1]
+                
+                # 計算 SNR (以分貝為單位)
+                if Range[i] != 0:
+                    signal_power = I1[i]*I1[i] + Q1[i]*Q1[i]
+                    noise_power = Range[i]*Range[i]
+                    if noise_power > 0:
+                        SNR[i] = 0.25*(10*np.log10(signal_power/noise_power + 1e-10) + 6) + 0.75*SNR[i-1]
+            
+            return pd.Series(SNR, index=src.index), pd.Series(Period, index=src.index)
+        
+        # ====== 2. Ehlers Elegant Oscillator ======
+        def calc_elegant_oscillator(src, length, rms_length):
+            """
+            計算 Ehlers 優雅震盪指標
+            使用 SuperSmoother 濾波器和 Fisher Transform
+            """
+            n = len(src)
+            
+            # SuperSmoother 係數
+            a1 = np.exp(-1.414 * np.pi / length)
+            b1 = 2 * a1 * np.cos(1.414 * np.pi / length)
+            c2 = b1
+            c3 = -a1 * a1
+            c1 = 1 - c2 - c3
+            
+            # 計算導數
+            deriv = src.diff(2)
+            
+            # 計算 RMS
+            rms = deriv.pow(2).rolling(rms_length).mean().pow(0.5)
+            rms = rms.replace(0, np.nan)
+            
+            # 標準化導數
+            nDeriv = deriv / rms
+            nDeriv = nDeriv.fillna(0)
+            
+            # Fisher Transform
+            nDeriv_clipped = nDeriv.clip(-0.999, 0.999)
+            iFish = (np.exp(2 * nDeriv_clipped) - 1) / (np.exp(2 * nDeriv_clipped) + 1)
+            
+            # SuperSmoother
+            ss = np.zeros(n)
+            iFish_arr = iFish.values
+            for i in range(3, n):
+                ss[i] = c1 * ((iFish_arr[i] + iFish_arr[i-1]) / 2) + c2 * ss[i-1] + c3 * ss[i-2]
+            
+            ss_series = pd.Series(ss, index=src.index)
+            
+            # 信號線 (WMA)
+            weights = np.arange(1, length + 1)
+            ssSig = ss_series.rolling(length).apply(lambda x: np.dot(x, weights[-len(x):]) / weights[-len(x):].sum(), raw=True)
+            
+            # 震盪指標
+            slo = ss_series - ssSig
+            
+            # 產生信號
+            sig = pd.Series(0, index=src.index)
+            for i in range(1, n):
+                if slo.iloc[i] > 0:
+                    sig.iloc[i] = 2 if slo.iloc[i] > slo.iloc[i-1] else 1
+                elif slo.iloc[i] < 0:
+                    sig.iloc[i] = -2 if slo.iloc[i] < slo.iloc[i-1] else -1
+            
+            return sig
+        
+        # ====== 3. Ehlers Decycler ======
+        def calc_decycler(src, length):
+            """
+            計算 Ehlers 解循環濾波器
+            過濾高頻雜訊，留下趨勢
+            """
+            twoPiPrd = 2 * np.pi / length
+            alpha = (np.cos(twoPiPrd) + np.sin(twoPiPrd) - 1) / np.cos(twoPiPrd)
+            
+            n = len(src)
+            dec = np.zeros(n)
+            src_arr = src.values
+            
+            for i in range(1, n):
+                dec[i] = (alpha / 2) * (src_arr[i] + src_arr[i-1]) + (1 - alpha) * dec[i-1]
+            
+            dec_series = pd.Series(dec, index=src.index)
+            
+            # 產生信號
+            sig = (src > dec_series).astype(int) - (src < dec_series).astype(int)
+            
+            return dec_series, sig
+        
+        # ====== 4. Ehlers Instantaneous Trendline ======
+        def calc_itrend(src, length):
+            """
+            計算 Ehlers 瞬時趨勢線
+            動態追蹤市場趨勢
+            """
+            alpha = 2 / (length + 1) / 2
+            n = len(src)
+            
+            ITrend = np.zeros(n)
+            Trigger = np.zeros(n)
+            src_arr = src.values
+            
+            for i in range(7, n):
+                ITrend[i] = ((alpha - alpha*alpha/4) * src_arr[i] + 
+                            0.5 * alpha*alpha * src_arr[i-1] - 
+                            (alpha - 0.75*alpha*alpha) * src_arr[i-2] + 
+                            2 * (1-alpha) * ITrend[i-1] - 
+                            (1-alpha) * (1-alpha) * ITrend[i-2])
+            
+            # 初始化前 7 根 K 棒
+            for i in range(2, min(7, n)):
+                ITrend[i] = (src_arr[i] + 2*src_arr[i-1] + src_arr[i-2]) / 4
+            
+            Trigger = 2 * ITrend - np.roll(ITrend, 2)
+            Trigger[:2] = 0
+            
+            return pd.Series(ITrend, index=src.index), pd.Series(Trigger, index=src.index)
+        
+        # ====== 5. Ehlers Spearman Rank ======
+        def calc_spearman(src, length):
+            """
+            計算 Ehlers 斯皮爾曼等級相關係數
+            衡量價格與時間的相關性（趨勢強度）
+            """
+            n = len(src)
+            signal = np.zeros(n)
+            src_arr = src.values
+            
+            for i in range(length, n):
+                # 取得價格視窗
+                prices = src_arr[i-length+1:i+1].copy()
+                
+                # 計算等級（排序後的位置）
+                sorted_indices = np.argsort(prices)
+                ranks = np.zeros(length)
+                for j, idx in enumerate(sorted_indices):
+                    ranks[idx] = j + 1
+                
+                # 計算 Spearman Rank Correlation
+                positions = np.arange(1, length + 1)
+                sum_d2 = np.sum((positions - ranks) ** 2)
+                rho = 1 - (6 * sum_d2) / (length * (length**2 - 1))
+                signal[i] = 2 * (0.5 - (1 - rho))
+            
+            signal_series = pd.Series(signal, index=src.index)
+            
+            # 產生信號
+            slo = signal_series.diff()
+            sig = pd.Series(0, index=src.index)
+            for i in range(1, n):
+                if slo.iloc[i] > 0 or signal_series.iloc[i] > 0:
+                    sig.iloc[i] = 2 if i > 1 and slo.iloc[i] > slo.iloc[i-1] else 1
+                elif slo.iloc[i] < 0 or signal_series.iloc[i] < 0:
+                    sig.iloc[i] = -2 if i > 1 and slo.iloc[i] < slo.iloc[i-1] else -1
+            
+            return sig
+        
+        # ====== 正規化函數 ======
+        def normalize(series, min_val, max_val):
+            """將序列正規化到指定範圍"""
+            hist_min = series.expanding().min()
+            hist_max = series.expanding().max()
+            range_val = (hist_max - hist_min).replace(0, 1)
+            return min_val + (max_val - min_val) * (series - hist_min) / range_val
+        
+        # 計算所有指標
+        snr, period = calc_snr(src, high, low)
+        nSNR = normalize(snr, 0, 2)
+        
+        eo_sig = calc_elegant_oscillator(src, self.length, self.rms_length)
+        
+        dec, dec_sig = calc_decycler(src, self.length)
+        
+        iT, Tr = calc_itrend(src, self.length)
+        
+        spearman_sig = calc_spearman(src, self.length)
+        
+        # 註冊指標
+        self.snr = self.I(lambda x: x, nSNR, name='SNR')
+        self.eo_sig = self.I(lambda x: x, eo_sig, name='ElegantOsc')
+        self.dec = self.I(lambda x: x, dec, name='Decycler')
+        self.dec_sig = self.I(lambda x: x, dec_sig, name='DecyclerSig')
+        self.itrend = self.I(lambda x: x, iT, name='ITrend')
+        self.spearman_sig = self.I(lambda x: x, spearman_sig, name='SpearmanSig')
+
+    def next(self):
+        """
+        交易邏輯函數：每根 K 棒都會執行一次
+        根據 5 個 Ehlers 指標的組合訊號決定交易
+        """
+        # 確保有足夠的歷史數據
+        if len(self.data.Close) < self.exit_length + 2:
+            return
+        
+        current_close = self.data.Close[-1]
+        current_snr = self.snr[-1]
+        current_eo_sig = self.eo_sig[-1]
+        prev_eo_sig = self.eo_sig[-2] if len(self.eo_sig) > 1 else 0
+        current_dec_sig = self.dec_sig[-1]
+        prev_dec_sig = self.dec_sig[-2] if len(self.dec_sig) > 1 else 0
+        current_dec = self.dec[-1]
+        prev_close = self.data.Close[-2]
+        prev_dec = self.dec[-2] if len(self.dec) > 1 else current_dec
+        current_itrend = self.itrend[-1]
+        prev_itrend = self.itrend[-2] if len(self.itrend) > 1 else current_itrend
+        current_spearman = self.spearman_sig[-1]
+        
+        # ====== 進場訊號 ======
+        # 做多條件：所有指標同時看多
+        eo_cross_up = current_eo_sig > 0 and prev_eo_sig <= 0
+        dec_cross_up = current_dec_sig > 0 and prev_dec_sig <= 0
+        price_cross_dec_up = current_close > current_dec and prev_close <= prev_dec
+        price_above_rising_itrend = current_close > current_itrend and current_itrend > prev_itrend
+        spearman_positive = current_spearman > 0
+        snr_ok = current_snr > self.snr_threshold
+        
+        enter_long = (eo_cross_up and dec_cross_up and price_cross_dec_up and 
+                     price_above_rising_itrend and spearman_positive and snr_ok)
+        
+        # 做空條件：所有指標同時看空
+        eo_cross_down = current_eo_sig < 0 and prev_eo_sig >= 0
+        dec_cross_down = current_dec_sig < 0 and prev_dec_sig >= 0
+        price_cross_dec_down = current_close < current_dec and prev_close >= prev_dec
+        price_below_falling_itrend = current_close < current_itrend and current_itrend < prev_itrend
+        spearman_negative = current_spearman < 0
+        
+        enter_short = (eo_cross_down and dec_cross_down and price_cross_dec_down and 
+                      price_below_falling_itrend and spearman_negative and snr_ok)
+        
+        # ====== 出場訊號 ======
+        # 使用 exit_length 根 K 棒前的價格來判斷
+        exit_idx = min(self.exit_length, len(self.data.Close) - 1)
+        exit_close = self.data.Close[-exit_idx] if exit_idx > 0 else current_close
+        exit_itrend = self.itrend[-exit_idx] if exit_idx > 0 and len(self.itrend) > exit_idx else current_itrend
+        prev_exit_close = self.data.Close[-exit_idx-1] if exit_idx > 0 and len(self.data.Close) > exit_idx + 1 else exit_close
+        
+        exit_long = exit_close < exit_itrend and prev_exit_close >= exit_itrend
+        exit_short = exit_close > exit_itrend and prev_exit_close <= exit_itrend
+        
+        # ====== 交易執行 ======
+        if self.position.is_long and exit_long:
+            self.position.close()
+        elif self.position.is_short and exit_short:
+            self.position.close()
+        
+        if enter_long and not self.position.is_long:
+            if self.position.is_short:
+                self.position.close()
+            self.buy()
+        elif enter_short and not self.position.is_short:
+            if self.position.is_long:
+                self.position.close()
+            self.sell()

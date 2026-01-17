@@ -4,7 +4,7 @@ UI Components Module
 """
 import streamlit as st
 import pandas as pd
-from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze
+from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze, EhlersCombo
 
 
 # 策略映射表
@@ -15,7 +15,8 @@ STRATEGY_MAP = {
     "LuciTech EMA (單向)": LuciTechEMA,
     "LuciTech EMA (雙向)": LuciTechEMAShort,
     "EMA + 帶通濾波器 (組合)": EMABandpassCombo,
-    "RSI T3 + 擠壓動量 (進階)": RSIAdaptiveT3Squeeze
+    "RSI T3 + 擠壓動量 (進階)": RSIAdaptiveT3Squeeze,
+    "Ehlers 綜合策略 (進階)": EhlersCombo
 }
 
 
@@ -112,6 +113,15 @@ def render_single_params(strategy_name: str) -> dict:
         params['bb_mult'] = st.sidebar.slider("布林帶倍數", 1.0, 3.0, 2.0, step=0.5)
         params['kc_length'] = st.sidebar.slider("Keltner 週期", 10, 50, 20)
         params['kc_mult'] = st.sidebar.slider("Keltner 倍數", 1.0, 3.0, 1.5, step=0.5)
+    
+    elif strategy_name == "Ehlers 綜合策略 (進階)":
+        st.sidebar.markdown("**基本參數**")
+        params['length'] = st.sidebar.slider("主要週期", 10, 50, 20)
+        params['rms_length'] = st.sidebar.slider("RMS 週期", 20, 100, 50)
+        st.sidebar.markdown("**訊號過濾**")
+        params['snr_threshold'] = st.sidebar.slider("SNR 閾值", 0.0, 1.0, 0.1, step=0.05)
+        st.sidebar.markdown("**出場設定**")
+        params['exit_length'] = st.sidebar.slider("出場回看週期", 1, 50, 10)
     
     return params
 
@@ -259,6 +269,26 @@ def render_optimize_params(strategy_name: str):
         optimize_params['rsi_len'] = range(rsi_min, rsi_max + 1, rsi_step)
         optimize_params['bb_length'] = range(bb_min, bb_max + 1, bb_step)
         optimize_params['kc_length'] = range(kc_min, kc_max + 1, kc_step)
+    
+    elif strategy_name == "Ehlers 綜合策略 (進階)":
+        st.sidebar.markdown("**主要週期**")
+        length_min = st.sidebar.number_input("週期最小值", 10, 50, 15, key="length_min")
+        length_max = st.sidebar.number_input("週期最大值", 10, 50, 30, key="length_max")
+        length_step = st.sidebar.number_input("週期步進值", 1, 10, 5, key="length_step")
+        
+        st.sidebar.markdown("**SNR 閾值**")
+        snr_min = st.sidebar.number_input("SNR 最小值", 0.0, 1.0, 0.05, step=0.05, key="snr_min")
+        snr_max = st.sidebar.number_input("SNR 最大值", 0.0, 1.0, 0.2, step=0.05, key="snr_max")
+        snr_step = st.sidebar.number_input("SNR 步進值", 0.05, 0.2, 0.05, step=0.05, key="snr_step")
+        
+        st.sidebar.markdown("**出場週期**")
+        exit_min = st.sidebar.number_input("出場最小值", 1, 50, 5, key="exit_min")
+        exit_max = st.sidebar.number_input("出場最大值", 1, 50, 20, key="exit_max")
+        exit_step = st.sidebar.number_input("出場步進值", 1, 10, 5, key="exit_step")
+        
+        optimize_params['length'] = range(length_min, length_max + 1, length_step)
+        optimize_params['snr_threshold'] = [x / 100 for x in range(int(snr_min * 100), int(snr_max * 100) + 1, int(snr_step * 100))]
+        optimize_params['exit_length'] = range(exit_min, exit_max + 1, exit_step)
     
     # 計算總組合數
     total_combinations = 1

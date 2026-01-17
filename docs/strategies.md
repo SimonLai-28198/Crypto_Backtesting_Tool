@@ -12,6 +12,7 @@
 4. [LuciTech EMA (風險管理)](#4-lucitech-ema-風險管理)
 5. [LuciTech EMA Short (雙向交易)](#5-lucitech-ema-short-雙向交易)
 6. [FreedX Grid Backtest (網格交易回測)](#6-freedx-grid-backtest-網格交易回測)
+7. [Ehlers Combo (綜合策略)](#7-ehlers-combo-綜合策略)
 
 ---
 
@@ -365,3 +366,59 @@ ATR = True Range 的 N 日平均值
 
 - **震盪盤整 (Consolidation)**：價格在箱型區間內來回波動。
 - 波動率較高的主流幣種 (如 BTC, ETH, SOL)。
+
+---
+
+## 7. Ehlers Combo (綜合策略)
+
+### 策略來源
+
+根據 TradingView 上 simwai 分享的 Pine Script v5 策略轉換。
+結合了 John Ehlers 的多個經典指標，形成高精度的交易系統。
+
+### 策略原理
+
+結合 5 個 Ehlers 指標形成五重過濾的交易系統：
+
+1. **Signal to Noise Ratio (SNR)**：信噪比，過濾雜訊
+2. **Elegant Oscillator**：優雅震盪指標，捕捉動能
+3. **Decycler**：解循環濾波器，過濾高頻雜訊
+4. **Instantaneous Trendline**：瞬時趨勢線，判斷趨勢方向
+5. **Spearman Rank**：斯皮爾曼等級相關，衡量趨勢強度
+
+### 交易訊號
+
+| 訊號 | 條件 | 動作 |
+|------|------|------|
+| 買入 | EO 向上穿越 0 + Decycler 向上 + 價格 > 上升趨勢線 + Spearman > 0 + SNR > 閾值 | 做多 |
+| 賣空 | EO 向下穿越 0 + Decycler 向下 + 價格 < 下降趨勢線 + Spearman < 0 + SNR > 閾值 | 做空 |
+| 平多 | 價格跌破瞬時趨勢線 | 平倉 |
+| 平空 | 價格突破瞬時趨勢線 | 平倉 |
+
+### 參數說明
+
+| 參數 | 說明 | 預設值 | 建議範圍 |
+|------|------|--------|----------|
+| `length` | 主要週期 | 20 | 10-50 |
+| `rms_length` | RMS 計算週期 | 50 | 20-100 |
+| `snr_threshold` | SNR 閾值 | 0.1 | 0.05-0.5 |
+| `exit_length` | 出場訊號回看週期 | 10 | 1-50 |
+
+### 優點
+
+- ✅ 五重過濾，訊號品質高
+- ✅ SNR 有效過濾盤整雜訊
+- ✅ 結合趨勢、動能、統計相關性
+- ✅ 基於訊號處理理論，數學基礎穩固
+
+### 缺點
+
+- ❌ 交易次數可能較少
+- ❌ 計算複雜，需要較多歷史數據
+- ❌ 參數較多，需要根據市場調整
+
+### 適用場景
+
+- 趨勢明顯的市場
+- 需要高勝率的交易系統
+- 逯廣波動原理的量化交易
