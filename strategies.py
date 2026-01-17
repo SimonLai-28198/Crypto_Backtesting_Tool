@@ -1494,3 +1494,378 @@ class CatchingTheBottom(Strategy):
             if exit_long:
                 self.position.close()
 
+
+class LevelBreakout(Strategy):
+    """
+    ═══════════════════════════════════════════════════════════════
+    策略名稱：Level Breakout 突破策略 (LBAB)
+    ═══════════════════════════════════════════════════════════════
+    
+    【策略來源】
+    根據 TradingView 上 [-_-] 分享的 Pine Script v5 策略轉換
+    原名稱：[-_-] LBAB (Level Breakout, Auto Backtesting)
+    
+    【策略原理】
+    這是一個「做多」的突破策略，尋找一種特定的形態：
+    - 當前 K 棒收盤價低於前一根的低點（假跌破/回調）
+    - 前一根 K 棒的高點低於 N 根 K 棒前的高點（有壓力位）
+    - 設置突破買單，當價格突破觸發 K 棒的高點時進場
+    
+    【買入訊號】
+    1. 當前收盤價 < 前一根低點 (close < low[1])
+    2. 前一根高點 < N 根前的高點 (high[1] < high[lookback+1])
+    3. 價格突破觸發 K 棒的高點時進場
+    
+    【出場訊號】
+    - 止盈 (TP)：進場價 * (1 + TP%)
+    - 止損 (SL)：觸發 K 棒的低點 * (1 - SL%)
+    
+    【優點】
+    ✓ 邏輯簡單清晰
+    ✓ 止盈止損在進場時就確定
+    ✓ 適合趨勢突破行情
+    
+    【缺點】
+    ✗ 只做多，無法在下跌行情獲利
+    ✗ 假突破容易觸發止損
+    ✗ 需要根據不同幣種調整參數
+    ═══════════════════════════════════════════════════════════════
+    """
+    # 策略參數
+    lookback = 2          # 回看週期 (可優化參數)
+    tp_percent = 5.0      # 止盈百分比 (可優化參數)
+    sl_percent = 5.0      # 止損百分比 (可優化參數)
+
+    def init(self):
+        """
+        初始化函數：準備價格數據
+        只在回測開始時執行一次
+        """
+        # 儲存 High 和 Low 以便在 next() 中使用
+        self.high = self.data.High
+        self.low = self.data.Low
+        self.close = self.data.Close
+        
+        # 追蹤觸發 K 棒的索引
+        self.trigger_bar_idx = None
+        self.entry_price = None
+        self.stop_loss_price = None
+        self.take_profit_price = None
+
+    def next(self):
+        """
+        交易邏輯函數：每根 K 棒都會執行一次
+        根據突破邏輯決定進出場
+        """
+        # 確保有足夠的歷史數據
+        if len(self.data.Close) < self.lookback + 3:
+            return
+        
+        current_close = self.close[-1]
+        prev_low = self.low[-2]
+        prev_high = self.high[-2]
+        lookback_high = self.high[-(self.lookback + 2)]
+        current_high = self.high[-1]
+        current_low = self.low[-1]
+        
+        # ====== 如果持有倉位，檢查止盈止損 ======
+        if self.position:
+            # 檢查止損
+            if current_low <= self.stop_loss_price:
+                self.position.close()
+                self.trigger_bar_idx = None
+                return
+            
+            # 檢查止盈
+            if current_high >= self.take_profit_price:
+                self.position.close()
+                self.trigger_bar_idx = None
+                return
+        
+        # ====== 如果有待觸發的突破信號 ======
+        if self.trigger_bar_idx is not None and not self.position:
+            # 檢查是否突破觸發 K 棒的高點
+            trigger_high = self.entry_price
+            
+            if current_high >= trigger_high:
+                # 計算止盈止損價格
+                trigger_low = self.high[-(len(self.data) - self.trigger_bar_idx)]
+                # 重新計算止損（基於觸發 K 棒的低點）
+                self.stop_loss_price = self.low[-(len(self.data) - self.trigger_bar_idx)] * (1 - self.sl_percent / 100)
+                self.take_profit_price = trigger_high * (1 + self.tp_percent / 100)
+                
+                # 進場
+                self.buy()
+                return
+        
+        # ====== 檢查進場條件 ======
+        # 條件 1: 當前收盤價 < 前一根低點
+        condition1 = current_close < prev_low
+        
+        # 條件 2: 前一根高點 < N 根前的高點
+        condition2 = prev_high < lookback_high
+        
+        # 如果滿足條件，設置突破信號
+        if condition1 and condition2 and not self.position:
+            self.trigger_bar_idx = len(self.data) - 1
+            self.entry_price = current_high  # 在當前 K 棒的高點設置突破買單
+            # 預設止損價格（會在進場時更新）
+            self.stop_loss_price = current_low * (1 - self.sl_percent / 100)
+            self.take_profit_price = current_high * (1 + self.tp_percent / 100)
+
+
+class CoralTrendPullback(Strategy):
+    """
+    ═══════════════════════════════════════════════════════════════
+    策略名稱：Coral Trend Pullback 珊瑚趨勢回撤策略
+    ═══════════════════════════════════════════════════════════════
+    
+    【策略來源】
+    根據 TradingView 上 kevinmck100 分享的 Pine Script v5 策略轉換
+    原始來源：TradeIQ YouTube 影片 "I Finally Found 80% Win Rate Trading Strategy For Crypto"
+    
+    【策略原理】
+    這是一個趨勢回撤策略，等待趨勢確立後的回調，然後在回調結束時進場：
+    1. 使用 Coral Trend 指標判斷趨勢方向
+    2. 等待價格回調到 Coral Trend 之下/上
+    3. 當價格重新突破 Coral Trend 時進場
+    
+    【做多訊號】必須按順序滿足：
+    C1: Coral Trend 是看漲（綠色/上升）
+    C2: 自從突破後，至少有 1 根 K 棒完全在 Coral Trend 之上
+    C3: 價格回調，收盤跌回 Coral Trend 之下
+    C4: 回調期間 Coral Trend 保持看漲
+    C5: 價格重新收盤突破 Coral Trend 之上 → 進場
+    
+    【做空訊號】完全對稱相反
+    
+    【出場】
+    - 止損：最近 N 根 K 棒的最低點（多）或最高點（空）
+    - 止盈：根據 R:R 比例計算
+    
+    【優點】
+    ✓ 等待回撤進場，風險較低
+    ✓ 固定 R:R 比例，風險可控
+    ✓ 雙向交易
+    
+    【缺點】
+    ✗ 可能錯過強勢突破行情
+    ✗ 計算較複雜
+    ✗ 震盪盤整行情可能頻繁止損
+    ═══════════════════════════════════════════════════════════════
+    """
+    # Coral Trend 參數
+    ct_smoothing = 25         # 平滑週期 (可優化參數)
+    ct_constant_d = 0.4       # 常數 D (可優化參數)
+    
+    # 風險管理參數
+    risk_reward = 1.5         # 風險報酬比 (可優化參數)
+    local_hl_lookback = 5     # 止損回看週期 (可優化參數)
+
+    def init(self):
+        """
+        初始化函數：計算 Coral Trend 指標
+        只在回測開始時執行一次
+        """
+        import numpy as np
+        
+        close = pd.Series(self.data.Close)
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        n = len(close)
+        
+        # ====== 計算 Coral Trend ======
+        def calc_coral_trend(src, sm, cd):
+            """
+            計算 Coral Trend 指標
+            使用多層 EMA 平滑和多項式組合
+            """
+            n = len(src)
+            
+            # 計算係數
+            di = (sm - 1.0) / 2.0 + 1.0
+            c1 = 2 / (di + 1.0)
+            c2 = 1 - c1
+            c3 = 3.0 * (cd * cd + cd * cd * cd)
+            c4 = -3.0 * (2.0 * cd * cd + cd + cd * cd * cd)
+            c5 = 3.0 * cd + 1.0 + cd * cd * cd + 3.0 * cd * cd
+            
+            # 初始化 6 層 EMA
+            i1 = np.zeros(n)
+            i2 = np.zeros(n)
+            i3 = np.zeros(n)
+            i4 = np.zeros(n)
+            i5 = np.zeros(n)
+            i6 = np.zeros(n)
+            bfr = np.zeros(n)
+            
+            src_arr = src.values
+            
+            for i in range(1, n):
+                i1[i] = c1 * src_arr[i] + c2 * i1[i-1]
+                i2[i] = c1 * i1[i] + c2 * i2[i-1]
+                i3[i] = c1 * i2[i] + c2 * i3[i-1]
+                i4[i] = c1 * i3[i] + c2 * i4[i-1]
+                i5[i] = c1 * i4[i] + c2 * i5[i-1]
+                i6[i] = c1 * i5[i] + c2 * i6[i-1]
+                
+                # Coral Trend 公式
+                bfr[i] = -cd * cd * cd * i6[i] + c3 * i5[i] + c4 * i4[i] + c5 * i3[i]
+            
+            return pd.Series(bfr, index=src.index)
+        
+        # 計算 Coral Trend
+        coral = calc_coral_trend(close, self.ct_smoothing, self.ct_constant_d)
+        
+        # 計算趨勢方向 (1=bullish, -1=bearish, 0=neutral)
+        coral_direction = pd.Series(0, index=close.index)
+        for i in range(1, n):
+            if coral.iloc[i] > coral.iloc[i-1]:
+                coral_direction.iloc[i] = 1  # Bullish
+            elif coral.iloc[i] < coral.iloc[i-1]:
+                coral_direction.iloc[i] = -1  # Bearish
+            else:
+                coral_direction.iloc[i] = coral_direction.iloc[i-1]
+        
+        # 註冊指標
+        self.coral = self.I(lambda x: x, coral, name='CoralTrend')
+        self.coral_dir = self.I(lambda x: x, coral_direction, name='CoralDir')
+        
+        # 狀態追蹤變數
+        self.pre_pullback_done = False
+        self.in_pullback = False
+        self.pullback_valid = False
+        self.last_cross_bar = 0
+        self.trend_at_pullback_start = 0
+
+    def next(self):
+        """
+        交易邏輯函數：每根 K 棒都會執行一次
+        實現趨勢回撤進場邏輯
+        """
+        # 確保有足夠的歷史數據
+        if len(self.data.Close) < self.local_hl_lookback + 5:
+            return
+        
+        current_close = self.data.Close[-1]
+        prev_close = self.data.Close[-2]
+        current_high = self.data.High[-1]
+        current_low = self.data.Low[-1]
+        current_coral = self.coral[-1]
+        prev_coral = self.coral[-2] if len(self.coral) > 1 else current_coral
+        current_dir = self.coral_dir[-1]
+        prev_dir = self.coral_dir[-2] if len(self.coral_dir) > 1 else 0
+        
+        is_bullish = current_dir > 0
+        is_bearish = current_dir < 0
+        
+        # ====== 如果持有倉位，檢查止盈止損 ======
+        if self.position:
+            if hasattr(self, 'stop_loss') and hasattr(self, 'take_profit'):
+                # 多單止損/止盈
+                if self.position.is_long:
+                    if current_low <= self.stop_loss:
+                        self.position.close()
+                        self._reset_state()
+                        return
+                    if current_high >= self.take_profit:
+                        self.position.close()
+                        self._reset_state()
+                        return
+                # 空單止損/止盈
+                elif self.position.is_short:
+                    if current_high >= self.stop_loss:
+                        self.position.close()
+                        self._reset_state()
+                        return
+                    if current_low <= self.take_profit:
+                        self.position.close()
+                        self._reset_state()
+                        return
+            return
+        
+        # ====== 檢測價格與 Coral Trend 的交叉 ======
+        # 向上穿越
+        cross_above = prev_close <= prev_coral and current_close > current_coral
+        # 向下穿越
+        cross_below = prev_close >= prev_coral and current_close < current_coral
+        
+        # ====== 狀態機邏輯 ======
+        
+        # 檢測 C2: 至少有 1 根 K 棒完全在 Coral Trend 之上/下
+        if is_bullish and not self.pre_pullback_done:
+            if current_low > current_coral and current_high > current_coral:
+                self.pre_pullback_done = True
+                self.last_cross_bar = len(self.data)
+        elif is_bearish and not self.pre_pullback_done:
+            if current_low < current_coral and current_high < current_coral:
+                self.pre_pullback_done = True
+                self.last_cross_bar = len(self.data)
+        
+        # 檢測 C3: 回撤開始
+        if self.pre_pullback_done and not self.in_pullback:
+            if is_bullish and cross_below:
+                self.in_pullback = True
+                self.trend_at_pullback_start = current_dir
+            elif is_bearish and cross_above:
+                self.in_pullback = True
+                self.trend_at_pullback_start = current_dir
+        
+        # 檢測 C4: 回撤期間趨勢是否保持
+        if self.in_pullback:
+            if self.trend_at_pullback_start > 0 and current_dir <= 0:
+                # 多頭回撤期間趨勢變空，重置
+                self._reset_state()
+            elif self.trend_at_pullback_start < 0 and current_dir >= 0:
+                # 空頭回撤期間趨勢變多，重置
+                self._reset_state()
+            else:
+                self.pullback_valid = True
+        
+        # 檢測 C5: 回撤結束，進場訊號
+        if self.pullback_valid:
+            # 多頭進場
+            if is_bullish and cross_above:
+                # 計算止損（最近 N 根 K 棒的最低點）
+                recent_low = min(self.data.Low[-self.local_hl_lookback:])
+                sl_distance = current_close - recent_low
+                
+                if sl_distance > 0:
+                    tp_distance = sl_distance * self.risk_reward
+                    
+                    self.stop_loss = recent_low
+                    self.take_profit = current_close + tp_distance
+                    
+                    self.buy()
+                    self._reset_state()
+                    return
+            
+            # 空頭進場
+            elif is_bearish and cross_below:
+                # 計算止損（最近 N 根 K 棒的最高點）
+                recent_high = max(self.data.High[-self.local_hl_lookback:])
+                sl_distance = recent_high - current_close
+                
+                if sl_distance > 0:
+                    tp_distance = sl_distance * self.risk_reward
+                    
+                    self.stop_loss = recent_high
+                    self.take_profit = current_close - tp_distance
+                    
+                    self.sell()
+                    self._reset_state()
+                    return
+        
+        # 如果趨勢反轉，重置狀態
+        if (is_bullish and prev_dir < 0) or (is_bearish and prev_dir > 0):
+            self._reset_state()
+    
+    def _reset_state(self):
+        """重置狀態機"""
+        self.pre_pullback_done = False
+        self.in_pullback = False
+        self.pullback_valid = False
+        self.trend_at_pullback_start = 0
+
+
+

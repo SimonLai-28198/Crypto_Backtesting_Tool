@@ -4,7 +4,7 @@ UI Components Module
 """
 import streamlit as st
 import pandas as pd
-from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze, EhlersCombo, CatchingTheBottom
+from strategies import SmaCross, RsiOscillator, SmaCrossATR, LuciTechEMA, LuciTechEMAShort, EMABandpassCombo, RSIAdaptiveT3Squeeze, EhlersCombo, CatchingTheBottom, LevelBreakout, CoralTrendPullback
 
 
 # 策略映射表
@@ -17,7 +17,9 @@ STRATEGY_MAP = {
     "EMA + 帶通濾波器 (組合)": EMABandpassCombo,
     "RSI T3 + 擠壓動量 (進階)": RSIAdaptiveT3Squeeze,
     "Ehlers 綜合策略 (進階)": EhlersCombo,
-    "抄底策略 Catching Bottom (逆勢)": CatchingTheBottom
+    "抄底策略 Catching Bottom (逆勢)": CatchingTheBottom,
+    "Level 突破策略 (突破)": LevelBreakout,
+    "Coral Trend 回撤策略 (回撤)": CoralTrendPullback
 }
 
 
@@ -136,6 +138,21 @@ def render_single_params(strategy_name: str) -> dict:
         st.sidebar.markdown("**出場 SMA**")
         params['sma_exit_fast'] = st.sidebar.slider("出場快速 SMA", 5, 20, 9)
         params['sma_exit_slow'] = st.sidebar.slider("出場慢速 SMA", 30, 80, 50)
+    
+    elif strategy_name == "Level 突破策略 (突破)":
+        st.sidebar.markdown("**突破參數**")
+        params['lookback'] = st.sidebar.slider("回看週期", 2, 15, 2)
+        st.sidebar.markdown("**止盈止損**")
+        params['tp_percent'] = st.sidebar.slider("止盈 (%)", 1.0, 20.0, 5.0, step=0.5)
+        params['sl_percent'] = st.sidebar.slider("止損 (%)", 1.0, 20.0, 5.0, step=0.5)
+    
+    elif strategy_name == "Coral Trend 回撤策略 (回撤)":
+        st.sidebar.markdown("**Coral Trend 參數**")
+        params['ct_smoothing'] = st.sidebar.slider("平滑週期", 10, 50, 25)
+        params['ct_constant_d'] = st.sidebar.slider("常數 D", 0.1, 1.0, 0.4, step=0.1)
+        st.sidebar.markdown("**風險管理**")
+        params['risk_reward'] = st.sidebar.slider("R:R 比例", 0.5, 5.0, 1.5, step=0.1)
+        params['local_hl_lookback'] = st.sidebar.slider("止損回看週期", 3, 20, 5)
     
     return params
 
@@ -335,6 +352,46 @@ def render_optimize_params(strategy_name: str):
         optimize_params['rsi_overbought'] = range(rsi_ob_min, rsi_ob_max + 1, rsi_ob_step)
         optimize_params['rsi_decrease'] = range(rsi_dec_min, rsi_dec_max + 1, rsi_dec_step)
         optimize_params['sma_fast'] = range(sma_fast_min, sma_fast_max + 1, sma_fast_step)
+    
+    elif strategy_name == "Level 突破策略 (突破)":
+        st.sidebar.markdown("**回看週期**")
+        lookback_min = st.sidebar.number_input("回看最小值", 2, 15, 2, key="lookback_min")
+        lookback_max = st.sidebar.number_input("回看最大值", 2, 15, 5, key="lookback_max")
+        lookback_step = st.sidebar.number_input("回看步進值", 1, 5, 1, key="lookback_step")
+        
+        st.sidebar.markdown("**止盈 (%)**")
+        tp_min = st.sidebar.number_input("止盈最小值", 1.0, 20.0, 3.0, step=1.0, key="tp_min")
+        tp_max = st.sidebar.number_input("止盈最大值", 1.0, 20.0, 10.0, step=1.0, key="tp_max")
+        tp_step = st.sidebar.number_input("止盈步進值", 1.0, 5.0, 2.0, step=1.0, key="tp_step")
+        
+        st.sidebar.markdown("**止損 (%)**")
+        sl_min = st.sidebar.number_input("止損最小值", 1.0, 20.0, 2.0, step=1.0, key="sl_min")
+        sl_max = st.sidebar.number_input("止損最大值", 1.0, 20.0, 8.0, step=1.0, key="sl_max")
+        sl_step = st.sidebar.number_input("止損步進值", 1.0, 5.0, 2.0, step=1.0, key="sl_step")
+        
+        optimize_params['lookback'] = range(lookback_min, lookback_max + 1, lookback_step)
+        optimize_params['tp_percent'] = [x / 10 for x in range(int(tp_min * 10), int(tp_max * 10) + 1, int(tp_step * 10))]
+        optimize_params['sl_percent'] = [x / 10 for x in range(int(sl_min * 10), int(sl_max * 10) + 1, int(sl_step * 10))]
+    
+    elif strategy_name == "Coral Trend 回撤策略 (回撤)":
+        st.sidebar.markdown("**Coral Trend 平滑週期**")
+        ct_sm_min = st.sidebar.number_input("平滑週期最小值", 10, 50, 20, key="ct_sm_min")
+        ct_sm_max = st.sidebar.number_input("平滑週期最大值", 10, 50, 35, key="ct_sm_max")
+        ct_sm_step = st.sidebar.number_input("平滑週期步進值", 1, 10, 5, key="ct_sm_step")
+        
+        st.sidebar.markdown("**R:R 比例**")
+        rr_min = st.sidebar.number_input("R:R 最小值", 0.5, 5.0, 1.0, step=0.5, key="rr_min")
+        rr_max = st.sidebar.number_input("R:R 最大值", 0.5, 5.0, 2.5, step=0.5, key="rr_max")
+        rr_step = st.sidebar.number_input("R:R 步進值", 0.5, 2.0, 0.5, step=0.5, key="rr_step")
+        
+        st.sidebar.markdown("**止損回看週期**")
+        hl_min = st.sidebar.number_input("回看最小值", 3, 20, 3, key="hl_min")
+        hl_max = st.sidebar.number_input("回看最大值", 3, 20, 10, key="hl_max")
+        hl_step = st.sidebar.number_input("回看步進值", 1, 5, 2, key="hl_step")
+        
+        optimize_params['ct_smoothing'] = range(ct_sm_min, ct_sm_max + 1, ct_sm_step)
+        optimize_params['risk_reward'] = [x / 10 for x in range(int(rr_min * 10), int(rr_max * 10) + 1, int(rr_step * 10))]
+        optimize_params['local_hl_lookback'] = range(hl_min, hl_max + 1, hl_step)
     
     # 計算總組合數
     total_combinations = 1

@@ -14,6 +14,8 @@
 6. [FreedX Grid Backtest (網格交易回測)](#6-freedx-grid-backtest-網格交易回測)
 7. [Ehlers Combo (綜合策略)](#7-ehlers-combo-綜合策略)
 8. [Catching the Bottom (抄底策略)](#8-catching-the-bottom-抄底策略)
+9. [Level Breakout (突破策略)](#9-level-breakout-突破策略)
+10. [Coral Trend Pullback (回撤策略)](#10-coral-trend-pullback-回撤策略)
 
 ---
 
@@ -478,3 +480,109 @@ ATR = True Range 的 N 日平均值
 - **熊市或下跌趨勢**中的反彈交易
 - 短線操作 (5m, 15m, 30m, 45m)
 - 推薦幣種：ETH, BNB, MATIC, XRP, SOL, AVAX
+
+---
+
+## 9. Level Breakout (突破策略)
+
+### 策略來源
+
+根據 TradingView 上 [-_-] 分享的 Pine Script v5 策略轉換。
+原名稱：[-_-] LBAB (Level Breakout, Auto Backtesting)
+
+### 策略原理
+
+這是一個「做多」的突破策略，尋找特定的形態：
+- 當前 K 棒收盤價低於前一根的低點（假跌破/回調）
+- 前一根 K 棒的高點低於 N 根 K 棒前的高點（有壓力位）
+- 設置突破買單，當價格突破觸發 K 棒的高點時進場
+
+### 交易訊號
+
+| 訊號 | 條件 | 動作 |
+|------|------|------|
+| 買入 | close < low[1] + high[1] < high[lookback+1] + 價格突破觸發 K 棒高點 | 做多 |
+| 止盈 | 進場價 * (1 + TP%) | 平倉 |
+| 止損 | 觸發 K 棒低點 * (1 - SL%) | 平倉 |
+
+### 參數說明
+
+| 參數 | 說明 | 預設值 | 建議範圍 |
+|------|------|--------|----------|
+| `lookback` | 回看週期 | 2 | 2-5 |
+| `tp_percent` | 止盈百分比 | 5.0 | 3-10 |
+| `sl_percent` | 止損百分比 | 5.0 | 2-8 |
+
+### 優點
+
+- ✅ 邏輯簡單清晰
+- ✅ 止盈止損在進場時就確定
+- ✅ 適合趨勢突破行情
+- ✅ 參數少，易於優化
+
+### 缺點
+
+- ❌ 只做多，無法在下跌行情獲利
+- ❌ 假突破容易觸發止損
+- ❌ 需要根據不同幣種調整參數
+
+### 適用場景
+
+- **突破交易**，尋找價格突破前波高點的機會
+- 中長線操作 (1h, 4h, 1d)
+- 適合趨勢明顯的市場
+
+---
+
+## 10. Coral Trend Pullback (回撤策略)
+
+### 策略來源
+
+根據 TradingView 上 kevinmck100 分享的 Pine Script v5 策略轉換。
+原始來源：TradeIQ YouTube 影片 "I Finally Found 80% Win Rate Trading Strategy For Crypto"
+
+### 策略原理
+
+這是一個**趨勢回撤策略**，等待趨勢確立後的回調，然後在回調結束時進場：
+- 使用 **Coral Trend** 指標判斷趨勢方向
+- 等待價格回調到 Coral Trend 之下/上
+- 當價格重新突破 Coral Trend 時進場
+
+### 交易訊號
+
+**做多流程** (必須按順序滿足)：
+1. Coral Trend 是看漲（綠色/上升）
+2. 至少 1 根 K 棒完全在 Coral Trend 之上
+3. 價格回調，收盤跌回 Coral Trend 之下
+4. 回調期間 Coral Trend 保持看漲
+5. 價格重新收盤突破 Coral Trend 之上 → 進場
+
+**做空流程**：完全對稱相反
+
+### 參數說明
+
+| 參數 | 說明 | 預設值 | 建議範圍 |
+|------|------|--------|----------|
+| `ct_smoothing` | Coral Trend 平滑週期 | 25 | 15-40 |
+| `ct_constant_d` | Coral Trend 常數 D | 0.4 | 0.2-0.6 |
+| `risk_reward` | 風險報酬比 (R:R) | 1.5 | 1.0-3.0 |
+| `local_hl_lookback` | 止損回看週期 | 5 | 3-10 |
+
+### 優點
+
+- ✅ 等待回撤進場，風險較低
+- ✅ 固定 R:R 比例，風險可控
+- ✅ 雙向交易（多空皆可）
+- ✅ 狀態機保證訊號品質
+
+### 缺點
+
+- ❌ 可能錯過強勢突破行情
+- ❌ 計算較複雜
+- ❌ 震盪盤整行情可能頻繁止損
+
+### 適用場景
+
+- **趨勢回撤交易**，在趨勢中尋找回調進場點
+- 推薦時間週期：1h
+- 適合趨勢明顯的市場
