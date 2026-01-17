@@ -10,6 +10,8 @@
 2. [RSI Mean Reversion (RSI 均值回歸)](#2-rsi-mean-reversion-rsi-均值回歸)
 3. [SMA Cross + ATR 停損](#3-sma-cross--atr-停損)
 4. [LuciTech EMA (風險管理)](#4-lucitech-ema-風險管理)
+5. [LuciTech EMA Short (雙向交易)](#5-lucitech-ema-short-雙向交易)
+6. [FreedX Grid Backtest (網格交易回測)](#6-freedx-grid-backtest-網格交易回測)
 
 ---
 
@@ -294,3 +296,72 @@ ATR = True Range 的 N 日平均值
 2. **考慮交易成本**：過短的週期參數會增加交易頻率
 3. **風險報酬比**：建議至少 1.5:1 以上
 4. **停損設定**：ATR 倍數建議 1.5-2.5 之間
+
+---
+
+## 6. FreedX Grid Backtest (網格交易回測)
+
+> ⚠️ **狀態**：尚未實作 (Not Implemented) - 待開發中
+
+### 策略原理
+
+網格交易 (Grid Trading) 是一種在特定價格區間內自動進行「低買高賣」的策略。
+- 策略會在預設的價格範圍內，畫出多條網格線 (Grid Levels)。
+- 當價格下跌觸碰到網格線時買入，當價格上漲觸碰到上一格網格線時賣出（做多網格）。
+- 此策略最適合**震盪行情 (Volatility)**，利用價格在區間內的來回波動獲利。
+
+### 主要功能 (Features)
+
+根據 FreedX 的原始設計，此策略包含以下進階功能：
+
+1.  **回測範圍 (Backtest Range)**：
+    - 精確設定回測的開始與結束時間，結束時自動平倉。
+
+2.  **投資與複利 (Investment & Compounding)**：
+    - **Fixed (固定)**：每次網格下單金額固定。
+    - **Compound (複利)**：將獲利重新投入，隨時間增加每次的下單量。
+
+3.  **網格分佈 (Distribution)**：
+    - **Arithmetic (等差)**：每格之間的「價格差」固定 (例：每 $100 一格)。
+    - **Geometric (等比)**：每格之間的「漲跌幅百分比」固定 (例：每 1% 一格)。
+
+4.  **方向模式 (Mode)**：
+    - **Long (做多)**：預期震盪向上，先買後賣。 (Backtesting.py 支援)
+    - **Short (做空)**：預期震盪向下，先賣後買。 (Backtesting.py 支援)
+    - **Neutral (中性)**：區間內高出低進，同時掛多空單。 (Backtesting.py 目前**不支援**鎖倉模式)
+
+5.  **手動區間與止損 (Manual Levels & Stop Triggers)**：
+    - 手動設定網格的**最高價 (Top)**、**最低價 (Bottom)** 與 **參考價 (Reference)**。
+    - 設定 **Stop Triggers** (止損觸發價)，當價格突破區間過多時強制平倉以保護本金。
+
+### 參數說明 (參考 Pine Script)
+
+| 參數分類 | 參數名稱 | 說明 |
+|----------|----------|------|
+| **Investment** | `Investment` | 總投資金額 |
+| | `Leverage` | 槓桿倍數 |
+| | `Method` | Auto / Compound / Fixed (資金管理模式) |
+| **Grid** | `Number Of Grids` | 網格數量 (格數) |
+| | `Distribution` | Arithmetic / Geometric (分佈方式) |
+| | `Mode` | Neutral / Long / Short (交易方向) |
+| **Levels** | `Top Range` | 網格區間上限 |
+| | `Bottom Range` | 網格區間下限 |
+| **Stoppers** | `Stop Triggers` | 啟用止損觸發 |
+| | `Upper/Lower Limit` | 止損/止盈的極限價格 |
+
+### 優點
+
+- ✅ **自動化獲利**：在震盪行情中無需人為盯盤，自動低買高賣。
+- ✅ **克服人性**：嚴格執行紀律，不會因為貪婪或恐懼錯過買賣點。
+- ✅ **資金利用率高**：可透過槓桿放大震盪收益。
+
+### 缺點
+
+- ❌ **單邊行情風險**：若價格突破網格區間後一去不回（大漲或大跌），會造成浮動虧損或踏空。
+- ❌ **資金分散**：資金被分散到多個網格中，單筆獲利較小。
+- ❌ **架構限制**：目前 Backtesting.py 無法完美模擬雙向鎖倉 (Hedging) 模式。
+
+### 適用場景
+
+- **震盪盤整 (Consolidation)**：價格在箱型區間內來回波動。
+- 波動率較高的主流幣種 (如 BTC, ETH, SOL)。
